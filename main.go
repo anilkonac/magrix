@@ -22,21 +22,27 @@ const (
 	ratioLandHeight = 1.0 / 4.0
 	playerWidth     = 40.0
 	playerHeight    = 100.0
+	gunWidth        = playerHeight / 2.0
+	gunHeight       = playerWidth / 3.0
 )
 
 var (
-	imageEmpty        = ebiten.NewImage(2, 1)
+	imageEmpty        = ebiten.NewImage(2, 2)
 	imageLand         *ebiten.Image
 	imagePlayer       *ebiten.Image
-	drawOptionsLand   = &ebiten.DrawImageOptions{}
-	drawOptionsPlayer = &ebiten.DrawImageOptions{}
+	imageGun          *ebiten.Image
+	drawOptionsLand   ebiten.DrawImageOptions
+	drawOptionsPlayer ebiten.DrawImageOptions
+	drawOptionsGun    ebiten.DrawImageOptions
 )
 
 func init() {
 	imageLand = imageEmpty.SubImage(image.Rect(0, 0, 1, 1)).(*ebiten.Image)
 	imagePlayer = imageEmpty.SubImage(image.Rect(1, 0, 2, 1)).(*ebiten.Image)
+	imageGun = imageEmpty.SubImage(image.Rect(0, 1, 1, 2)).(*ebiten.Image)
 	imageLand.Fill(colornames.Forestgreen)
 	imagePlayer.Fill(colornames.Slategray)
+	imageGun.Fill(colornames.Orange)
 
 	drawOptionsLand.GeoM.Scale(screenWidth, screenHeight*ratioLandHeight)
 	drawOptionsLand.GeoM.Translate(0, screenHeight*(1.0-ratioLandHeight))
@@ -65,13 +71,19 @@ func (g *game) Draw(screen *ebiten.Image) {
 	screen.Fill(colornames.Lightskyblue)
 
 	// Draw land
-	screen.DrawImage(imageLand, drawOptionsLand)
+	screen.DrawImage(imageLand, &drawOptionsLand)
 
 	// Draw prototype player
 	drawOptionsPlayer.GeoM.Reset()
 	drawOptionsPlayer.GeoM.Scale(playerWidth, playerHeight)
 	drawOptionsPlayer.GeoM.Translate(g.playerX, g.playerY)
-	screen.DrawImage(imagePlayer, drawOptionsPlayer)
+	screen.DrawImage(imagePlayer, &drawOptionsPlayer)
+
+	// Draw gun
+	drawOptionsGun.GeoM.Reset()
+	drawOptionsGun.GeoM.Scale(gunWidth, gunHeight)
+	drawOptionsGun.GeoM.Translate(g.playerX+playerWidth/2.0, g.playerY+(playerHeight-gunHeight)/2.0)
+	screen.DrawImage(imageGun, &drawOptionsGun)
 
 	// Print fps
 	ebitenutil.DebugPrint(screen, fmt.Sprintf("FPS: %.2f", ebiten.CurrentFPS()))
@@ -88,7 +100,7 @@ func main() {
 	ebiten.SetWindowSize(screenWidth, screenHeight)
 	ebiten.SetWindowTitle("Magrix")
 	// ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
-	// ebiten.SetFPSMode(ebiten.FPSModeVsyncOffMaximum)
+	ebiten.SetFPSMode(ebiten.FPSModeVsyncOffMaximum)
 
 	if err := ebiten.RunGame(newGame()); err != nil {
 		log.Fatal(err)
