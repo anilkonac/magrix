@@ -1,1 +1,1 @@
-# magnix
+# magrix
