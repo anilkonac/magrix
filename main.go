@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"image/color"
 	"log"
+	"math"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
@@ -58,8 +59,10 @@ func init() {
 
 // game implements ebiten.game interface.
 type game struct {
-	playerX, playerY float64
-	cursorX, cursorY int
+	playerX, playerY   float64
+	fCursorX, fCursorY float64
+	gunAngle           float64
+	gunX, gunY         float64
 }
 
 func newGame() *game {
@@ -71,7 +74,18 @@ func newGame() *game {
 
 // Update is called every tick (1/60 [s] by default).
 func (g *game) Update() error {
-	g.cursorX, g.cursorY = ebiten.CursorPosition()
+	x, y := ebiten.CursorPosition()
+	g.fCursorX, g.fCursorY = float64(x), float64(y)
+
+	// Update gun position
+	g.gunX = g.playerX + playerWidth/2.0
+	g.gunY = g.playerY + playerHeight/2.0
+
+	// Calculate gun rotation angle
+	distX := g.fCursorX - g.gunX
+	distY := g.fCursorY - g.gunY
+	g.gunAngle = math.Atan2(distY, distX)
+
 	return nil
 }
 
@@ -91,12 +105,14 @@ func (g *game) Draw(screen *ebiten.Image) {
 	// Draw prototype gun
 	drawOptionsGun.GeoM.Reset()
 	drawOptionsGun.GeoM.Scale(gunWidth, gunHeight)
-	drawOptionsGun.GeoM.Translate(g.playerX+playerWidth/2.0, g.playerY+(playerHeight-gunHeight)/2.0)
+	drawOptionsGun.GeoM.Translate(0, -gunHeight/2.0)
+	drawOptionsGun.GeoM.Rotate(g.gunAngle)
+	drawOptionsGun.GeoM.Translate(g.gunX, g.gunY)
 	screen.DrawImage(imageGun, &drawOptionsGun)
 
 	// Draw crosshair
 	drawOptionsCursor.GeoM.Reset()
-	drawOptionsCursor.GeoM.Translate(float64(g.cursorX-crosshairRadius), float64(g.cursorY-crosshairRadius))
+	drawOptionsCursor.GeoM.Translate(g.fCursorX-crosshairRadius, g.fCursorY-crosshairRadius)
 	screen.DrawImage(imageCursor, &drawOptionsCursor)
 
 	// Print fps
