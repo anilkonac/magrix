@@ -4,7 +4,7 @@ package main
 
 import (
 	"fmt"
-	"image"
+	"image/color"
 	"log"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -19,38 +19,47 @@ const (
 )
 
 const (
-	ratioLandHeight = 1.0 / 4.0
-	playerWidth     = 40.0
-	playerHeight    = 100.0
-	gunWidth        = playerHeight / 2.0
-	gunHeight       = playerWidth / 3.0
+	ratioLandHeight      = 1.0 / 4.0
+	playerWidth          = 40.0
+	playerHeight         = 100.0
+	gunWidth             = playerHeight / 2.0
+	gunHeight            = playerWidth / 3.0
+	crosshairRadius      = 10
+	crosshairInnerRadius = 3
 )
 
 var (
 	imageEmpty        = ebiten.NewImage(2, 2)
-	imageLand         *ebiten.Image
-	imagePlayer       *ebiten.Image
-	imageGun          *ebiten.Image
+	imageLand         = ebiten.NewImage(1, 1)
+	imagePlayer       = ebiten.NewImage(1, 1)
+	imageGun          = ebiten.NewImage(1, 1)
+	imageCursor       = ebiten.NewImage(crosshairRadius*2, crosshairRadius*2)
 	drawOptionsLand   ebiten.DrawImageOptions
 	drawOptionsPlayer ebiten.DrawImageOptions
 	drawOptionsGun    ebiten.DrawImageOptions
+	drawOptionsCursor ebiten.DrawImageOptions
 )
 
 func init() {
-	imageLand = imageEmpty.SubImage(image.Rect(0, 0, 1, 1)).(*ebiten.Image)
-	imagePlayer = imageEmpty.SubImage(image.Rect(1, 0, 2, 1)).(*ebiten.Image)
-	imageGun = imageEmpty.SubImage(image.Rect(0, 1, 1, 2)).(*ebiten.Image)
+	imageEmpty.Fill(color.White)
 	imageLand.Fill(colornames.Forestgreen)
 	imagePlayer.Fill(colornames.Slategray)
 	imageGun.Fill(colornames.Orange)
 
 	drawOptionsLand.GeoM.Scale(screenWidth, screenHeight*ratioLandHeight)
 	drawOptionsLand.GeoM.Translate(0, screenHeight*(1.0-ratioLandHeight))
+
+	// Prepare cursor image
+	ebitenutil.DrawLine(imageCursor, 0, crosshairRadius, crosshairRadius-crosshairInnerRadius, crosshairRadius, colornames.Red)
+	ebitenutil.DrawLine(imageCursor, crosshairRadius, 0, crosshairRadius, crosshairRadius-crosshairInnerRadius, colornames.Red)
+	ebitenutil.DrawLine(imageCursor, crosshairRadius+crosshairInnerRadius, crosshairRadius, 2*crosshairRadius, crosshairRadius, colornames.Red)
+	ebitenutil.DrawLine(imageCursor, crosshairRadius, crosshairRadius+crosshairInnerRadius, crosshairRadius, 2*crosshairRadius, colornames.Red)
 }
 
 // game implements ebiten.game interface.
 type game struct {
 	playerX, playerY float64
+	cursorX, cursorY int
 }
 
 func newGame() *game {
@@ -62,7 +71,7 @@ func newGame() *game {
 
 // Update is called every tick (1/60 [s] by default).
 func (g *game) Update() error {
-	// Write your game's logical update.
+	g.cursorX, g.cursorY = ebiten.CursorPosition()
 	return nil
 }
 
@@ -79,11 +88,16 @@ func (g *game) Draw(screen *ebiten.Image) {
 	drawOptionsPlayer.GeoM.Translate(g.playerX, g.playerY)
 	screen.DrawImage(imagePlayer, &drawOptionsPlayer)
 
-	// Draw gun
+	// Draw prototype gun
 	drawOptionsGun.GeoM.Reset()
 	drawOptionsGun.GeoM.Scale(gunWidth, gunHeight)
 	drawOptionsGun.GeoM.Translate(g.playerX+playerWidth/2.0, g.playerY+(playerHeight-gunHeight)/2.0)
 	screen.DrawImage(imageGun, &drawOptionsGun)
+
+	// Draw crosshair
+	drawOptionsCursor.GeoM.Reset()
+	drawOptionsCursor.GeoM.Translate(float64(g.cursorX-crosshairRadius), float64(g.cursorY-crosshairRadius))
+	screen.DrawImage(imageCursor, &drawOptionsCursor)
 
 	// Print fps
 	ebitenutil.DebugPrint(screen, fmt.Sprintf("FPS: %.2f", ebiten.CurrentFPS()))
@@ -101,6 +115,7 @@ func main() {
 	ebiten.SetWindowTitle("Magrix")
 	// ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
 	ebiten.SetFPSMode(ebiten.FPSModeVsyncOffMaximum)
+	ebiten.SetCursorMode(ebiten.CursorModeHidden)
 
 	if err := ebiten.RunGame(newGame()); err != nil {
 		log.Fatal(err)
