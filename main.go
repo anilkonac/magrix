@@ -5,7 +5,6 @@ package main
 import (
 	"fmt"
 	"log"
-	"math"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
@@ -22,76 +21,60 @@ const (
 const (
 	ratioLandHeight      = 1.0 / 4.0
 	landY                = (1.0 - ratioLandHeight) * screenHeight
-	playerWidth          = 40.0
-	playerHeight         = 100.0
-	gunWidth             = playerHeight / 2.0
-	gunHeight            = playerWidth / 3.0
 	crosshairRadius      = 10
 	crosshairInnerRadius = 3
-)
-
-const (
-	gravity = 500.0
+	gravity              = 500.0
 )
 
 var (
 	imageLand         = ebiten.NewImage(1, 1)
-	imagePlayer       = ebiten.NewImage(1, 1)
-	imageGun          = ebiten.NewImage(1, 1)
 	imageCursor       = ebiten.NewImage(crosshairRadius*2, crosshairRadius*2)
 	drawOptionsLand   ebiten.DrawImageOptions
-	drawOptionsPlayer ebiten.DrawImageOptions
-	drawOptionsGun    ebiten.DrawImageOptions
 	drawOptionsCursor ebiten.DrawImageOptions
 )
 
 func init() {
 	imageLand.Fill(colornames.Forestgreen)
-	imagePlayer.Fill(colornames.Slategray)
-	imageGun.Fill(colornames.Orange)
 
 	drawOptionsLand.GeoM.Scale(screenWidth, screenHeight*ratioLandHeight)
 	drawOptionsLand.GeoM.Translate(0, landY)
 
-	// Prepare cursor image
-	ebitenutil.DrawLine(imageCursor, 0, crosshairRadius, crosshairRadius-crosshairInnerRadius, crosshairRadius, colornames.Red)
-	ebitenutil.DrawLine(imageCursor, crosshairRadius, 0, crosshairRadius, crosshairRadius-crosshairInnerRadius, colornames.Red)
-	ebitenutil.DrawLine(imageCursor, crosshairRadius+crosshairInnerRadius, crosshairRadius, 2*crosshairRadius, crosshairRadius, colornames.Red)
-	ebitenutil.DrawLine(imageCursor, crosshairRadius, crosshairRadius+crosshairInnerRadius, crosshairRadius, 2*crosshairRadius, colornames.Red)
+	initCursorImage()
+}
+
+func initCursorImage() {
+	ebitenutil.DrawLine(imageCursor, 0, crosshairRadius,
+		crosshairRadius-crosshairInnerRadius, crosshairRadius, colornames.Red)
+	ebitenutil.DrawLine(imageCursor, crosshairRadius, 0,
+		crosshairRadius, crosshairRadius-crosshairInnerRadius, colornames.Red)
+	ebitenutil.DrawLine(imageCursor, crosshairRadius+crosshairInnerRadius,
+		crosshairRadius, 2*crosshairRadius, crosshairRadius, colornames.Red)
+	ebitenutil.DrawLine(imageCursor, crosshairRadius, crosshairRadius+crosshairInnerRadius,
+		crosshairRadius, 2*crosshairRadius, colornames.Red)
 }
 
 // game implements ebiten.game interface.
 type game struct {
-	playerX, playerY   float64
-	fCursorX, fCursorY float64
-	gunAngle           float64
-	gunX, gunY         float64
-	space              *cp.Space
-	playerBody         *cp.Body
+	player    player
+	posCursor cp.Vector
+	space     *cp.Space
 }
 
 func newGame() *game {
 	game := &game{
-		playerX: screenWidth / 2.0,
-		playerY: screenHeight / 2.0,
+		player: *newPlayer(cp.Vector{X: screenWidth / 2.0, Y: screenHeight / 2.0}),
 	}
 
 	space := cp.NewSpace()
 	space.Iterations = 1
 	space.SetGravity(cp.Vector{X: 0, Y: gravity})
 
-	// Player
-	body := cp.NewBody(1, cp.INFINITY)
-	body.SetPosition(cp.Vector{X: game.playerX, Y: game.playerY})
-	shape := cp.NewBox(body, playerWidth, playerHeight, playerHeight/2.0)
-	// TODO: Set elasticity and friction
-	game.playerBody = body
-
-	space.AddBody(shape.Body())
-	space.AddShape(shape)
+	// Add player to the space
+	space.AddBody(game.player.shape.Body())
+	space.AddShape(game.player.shape)
 	game.space = space
 
-	// Land
+	// Add Land to the space
 	space.AddShape(cp.NewSegment(space.StaticBody, cp.Vector{X: 0, Y: landY}, cp.Vector{X: screenWidth, Y: landY}, 0))
 
 	return game
@@ -99,44 +82,19 @@ func newGame() *game {
 
 // Update is called every tick (1/60 [s] by default).
 func (g *game) Update() error {
-	// g.space.Step(1.0 / float64(ebiten.MaxTPS()))
 	g.space.Step(deltaTime)
+
+	// Update cursor pos
 	x, y := ebiten.CursorPosition()
-	g.fCursorX, g.fCursorY = float64(x), float64(y)
+	g.posCursor = cp.Vector{X: float64(x), Y: float64(y)}
 
-	// Update player position
-	g.playerX = g.playerBody.Position().X
-	g.playerY = g.playerBody.Position().Y
+	// Update player and player's gun
+	g.player.update(&g.posCursor)
 
-	// Update gun position
-	g.gunX = g.playerX + playerWidth/2.0
-	g.gunY = g.playerY + playerHeight/2.0
-
-	// Calculate gun rotation angle
-	distX := g.fCursorX - g.gunX
-	distY := g.fCursorY - g.gunY
-	g.gunAngle = math.Atan2(distY, distX)
-
-	g.updateGeometryMatrices()
-	return nil
-}
-
-func (g *game) updateGeometryMatrices() {
-	// Player
-	drawOptionsPlayer.GeoM.Reset()
-	drawOptionsPlayer.GeoM.Scale(playerWidth, playerHeight)
-	drawOptionsPlayer.GeoM.Translate(g.playerX, g.playerY)
-
-	// Gun
-	drawOptionsGun.GeoM.Reset()
-	drawOptionsGun.GeoM.Scale(gunWidth, gunHeight)
-	drawOptionsGun.GeoM.Translate(0, -gunHeight/2.0)
-	drawOptionsGun.GeoM.Rotate(g.gunAngle)
-	drawOptionsGun.GeoM.Translate(g.gunX, g.gunY)
-
-	// Crosshair
+	// Update Crosshair geometry matrix
 	drawOptionsCursor.GeoM.Reset()
-	drawOptionsCursor.GeoM.Translate(g.fCursorX-crosshairRadius, g.fCursorY-crosshairRadius)
+	drawOptionsCursor.GeoM.Translate(g.posCursor.X-crosshairRadius, g.posCursor.Y-crosshairRadius)
+	return nil
 }
 
 // Draw is called every frame (typically 1/60[s] for 60Hz display).
@@ -146,11 +104,8 @@ func (g *game) Draw(screen *ebiten.Image) {
 	// Draw land
 	screen.DrawImage(imageLand, &drawOptionsLand)
 
-	// Draw prototype player
-	screen.DrawImage(imagePlayer, &drawOptionsPlayer)
-
-	// Draw prototype gun
-	screen.DrawImage(imageGun, &drawOptionsGun)
+	// Draw player and its gun
+	g.player.draw(screen)
 
 	// Draw crosshair
 	screen.DrawImage(imageCursor, &drawOptionsCursor)
