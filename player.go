@@ -7,7 +7,25 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/jakecoffman/cp"
+	"golang.org/x/image/colornames"
 )
+
+const (
+	playerWidth  = 40.0
+	playerHeight = 100.0
+	gunWidth     = playerHeight / 2.0
+	gunHeight    = playerWidth / 3.0
+)
+
+var (
+	imagePlayer = ebiten.NewImage(1, 1)
+	imageGun    = ebiten.NewImage(1, 1)
+)
+
+func init() {
+	imagePlayer.Fill(colornames.Slategray)
+	imageGun.Fill(colornames.Orange)
+}
 
 type player struct {
 	pos               cp.Vector
@@ -58,4 +76,12 @@ func (p *player) updateGeometryMatrices() {
 	p.drawOptionsGun.GeoM.Translate(0, -gunHeight/2.0)
 	p.drawOptionsGun.GeoM.Rotate(p.angleGun)
 	p.drawOptionsGun.GeoM.Translate(p.posGun.X, p.posGun.Y)
+}
+
+func (p *player) draw(dst *ebiten.Image) {
+	// Draw prototype player
+	dst.DrawImage(imagePlayer, &p.drawOptionsPlayer)
+
+	// Draw prototype gun
+	dst.DrawImage(imageGun, &p.drawOptionsGun)
 }
