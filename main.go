@@ -4,7 +4,6 @@ package main
 
 import (
 	"fmt"
-	"image/color"
 	"log"
 	"math"
 
@@ -30,7 +29,6 @@ const (
 )
 
 var (
-	imageEmpty        = ebiten.NewImage(2, 2)
 	imageLand         = ebiten.NewImage(1, 1)
 	imagePlayer       = ebiten.NewImage(1, 1)
 	imageGun          = ebiten.NewImage(1, 1)
@@ -42,7 +40,6 @@ var (
 )
 
 func init() {
-	imageEmpty.Fill(color.White)
 	imageLand.Fill(colornames.Forestgreen)
 	imagePlayer.Fill(colornames.Slategray)
 	imageGun.Fill(colornames.Orange)
@@ -86,7 +83,26 @@ func (g *game) Update() error {
 	distY := g.fCursorY - g.gunY
 	g.gunAngle = math.Atan2(distY, distX)
 
+	g.updateGeometryMatrices()
 	return nil
+}
+
+func (g *game) updateGeometryMatrices() {
+	// Player
+	drawOptionsPlayer.GeoM.Reset()
+	drawOptionsPlayer.GeoM.Scale(playerWidth, playerHeight)
+	drawOptionsPlayer.GeoM.Translate(g.playerX, g.playerY)
+
+	// Gun
+	drawOptionsGun.GeoM.Reset()
+	drawOptionsGun.GeoM.Scale(gunWidth, gunHeight)
+	drawOptionsGun.GeoM.Translate(0, -gunHeight/2.0)
+	drawOptionsGun.GeoM.Rotate(g.gunAngle)
+	drawOptionsGun.GeoM.Translate(g.gunX, g.gunY)
+
+	// Crosshair
+	drawOptionsCursor.GeoM.Reset()
+	drawOptionsCursor.GeoM.Translate(g.fCursorX-crosshairRadius, g.fCursorY-crosshairRadius)
 }
 
 // Draw is called every frame (typically 1/60[s] for 60Hz display).
@@ -97,22 +113,12 @@ func (g *game) Draw(screen *ebiten.Image) {
 	screen.DrawImage(imageLand, &drawOptionsLand)
 
 	// Draw prototype player
-	drawOptionsPlayer.GeoM.Reset()
-	drawOptionsPlayer.GeoM.Scale(playerWidth, playerHeight)
-	drawOptionsPlayer.GeoM.Translate(g.playerX, g.playerY)
 	screen.DrawImage(imagePlayer, &drawOptionsPlayer)
 
 	// Draw prototype gun
-	drawOptionsGun.GeoM.Reset()
-	drawOptionsGun.GeoM.Scale(gunWidth, gunHeight)
-	drawOptionsGun.GeoM.Translate(0, -gunHeight/2.0)
-	drawOptionsGun.GeoM.Rotate(g.gunAngle)
-	drawOptionsGun.GeoM.Translate(g.gunX, g.gunY)
 	screen.DrawImage(imageGun, &drawOptionsGun)
 
 	// Draw crosshair
-	drawOptionsCursor.GeoM.Reset()
-	drawOptionsCursor.GeoM.Translate(g.fCursorX-crosshairRadius, g.fCursorY-crosshairRadius)
 	screen.DrawImage(imageCursor, &drawOptionsCursor)
 
 	// Print fps
