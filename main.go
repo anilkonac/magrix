@@ -9,6 +9,7 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
+	"github.com/jakecoffman/cp"
 	"golang.org/x/image/colornames"
 )
 
@@ -20,12 +21,17 @@ const (
 
 const (
 	ratioLandHeight      = 1.0 / 4.0
+	landY                = (1.0 - ratioLandHeight) * screenHeight
 	playerWidth          = 40.0
 	playerHeight         = 100.0
 	gunWidth             = playerHeight / 2.0
 	gunHeight            = playerWidth / 3.0
 	crosshairRadius      = 10
 	crosshairInnerRadius = 3
+)
+
+const (
+	gravity = 500.0
 )
 
 var (
@@ -45,7 +51,7 @@ func init() {
 	imageGun.Fill(colornames.Orange)
 
 	drawOptionsLand.GeoM.Scale(screenWidth, screenHeight*ratioLandHeight)
-	drawOptionsLand.GeoM.Translate(0, screenHeight*(1.0-ratioLandHeight))
+	drawOptionsLand.GeoM.Translate(0, landY)
 
 	// Prepare cursor image
 	ebitenutil.DrawLine(imageCursor, 0, crosshairRadius, crosshairRadius-crosshairInnerRadius, crosshairRadius, colornames.Red)
@@ -60,19 +66,47 @@ type game struct {
 	fCursorX, fCursorY float64
 	gunAngle           float64
 	gunX, gunY         float64
+	space              *cp.Space
+	playerBody         *cp.Body
 }
 
 func newGame() *game {
-	return &game{
+	game := &game{
 		playerX: screenWidth / 2.0,
 		playerY: screenHeight / 2.0,
 	}
+
+	space := cp.NewSpace()
+	space.Iterations = 1
+	space.SetGravity(cp.Vector{X: 0, Y: gravity})
+
+	// Player
+	body := cp.NewBody(1, cp.INFINITY)
+	body.SetPosition(cp.Vector{X: game.playerX, Y: game.playerY})
+	shape := cp.NewBox(body, playerWidth, playerHeight, playerHeight/2.0)
+	// TODO: Set elasticity and friction
+	game.playerBody = body
+
+	space.AddBody(shape.Body())
+	space.AddShape(shape)
+	game.space = space
+
+	// Land
+	space.AddShape(cp.NewSegment(space.StaticBody, cp.Vector{X: 0, Y: landY}, cp.Vector{X: screenWidth, Y: landY}, 0))
+
+	return game
 }
 
 // Update is called every tick (1/60 [s] by default).
 func (g *game) Update() error {
+	// g.space.Step(1.0 / float64(ebiten.MaxTPS()))
+	g.space.Step(deltaTime)
 	x, y := ebiten.CursorPosition()
 	g.fCursorX, g.fCursorY = float64(x), float64(y)
+
+	// Update player position
+	g.playerX = g.playerBody.Position().X
+	g.playerY = g.playerBody.Position().Y
 
 	// Update gun position
 	g.gunX = g.playerX + playerWidth/2.0
@@ -122,7 +156,8 @@ func (g *game) Draw(screen *ebiten.Image) {
 	screen.DrawImage(imageCursor, &drawOptionsCursor)
 
 	// Print fps
-	ebitenutil.DebugPrint(screen, fmt.Sprintf("FPS: %.2f", ebiten.CurrentFPS()))
+	ebitenutil.DebugPrint(screen, fmt.Sprintf("TPS: %.2f  FPS: %.2f", ebiten.CurrentTPS(), ebiten.CurrentFPS()))
+	// ebitenutil.DebugPrintAt(screen, fmt.Sprintf("X: %.0f, Y: %.0f", g.fCursorX, g.fCursorY), 0, 15)
 }
 
 // Layout takes the outside size (e.g., the window size) and returns the (logical) screen size.
