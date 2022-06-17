@@ -23,7 +23,6 @@ const (
 	landY                = (1.0 - ratioLandHeight) * screenHeight
 	crosshairRadius      = 10
 	crosshairInnerRadius = 3
-	gravity              = 500.0
 )
 
 var (
@@ -55,9 +54,9 @@ func initCursorImage() {
 
 // game implements ebiten.game interface.
 type game struct {
-	player    player
-	posCursor cp.Vector
-	space     *cp.Space
+	player player
+	space  *cp.Space
+	input  input
 }
 
 func newGame() *game {
@@ -75,7 +74,9 @@ func newGame() *game {
 	game.space = space
 
 	// Add Land to the space
-	space.AddShape(cp.NewSegment(space.StaticBody, cp.Vector{X: 0, Y: landY}, cp.Vector{X: screenWidth, Y: landY}, 0))
+	shape := space.AddShape(cp.NewSegment(space.StaticBody, cp.Vector{X: 0, Y: landY}, cp.Vector{X: screenWidth, Y: landY}, 0))
+	// shape.SetElasticity(1)
+	shape.SetFriction(1)
 
 	return game
 }
@@ -84,16 +85,15 @@ func newGame() *game {
 func (g *game) Update() error {
 	g.space.Step(deltaTime)
 
-	// Update cursor pos
-	x, y := ebiten.CursorPosition()
-	g.posCursor = cp.Vector{X: float64(x), Y: float64(y)}
+	// Update input states(mouse pos and pressed keys)
+	g.input.update()
 
 	// Update player and player's gun
-	g.player.update(&g.posCursor)
+	g.player.update(&g.input)
 
 	// Update Crosshair geometry matrix
 	drawOptionsCursor.GeoM.Reset()
-	drawOptionsCursor.GeoM.Translate(g.posCursor.X-crosshairRadius, g.posCursor.Y-crosshairRadius)
+	drawOptionsCursor.GeoM.Translate(g.input.cursorPos.X-crosshairRadius, g.input.cursorPos.Y-crosshairRadius)
 	return nil
 }
 

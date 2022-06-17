@@ -5,7 +5,7 @@ go 1.18
 require (
 	github.com/hajimehoshi/ebiten/v2 v2.3.4
 	github.com/jakecoffman/cp v1.1.0
-	golang.org/x/image v0.0.0-20220601225756-64ec528b34cd
+	golang.org/x/image v0.0.0-20220617043117-41969df76e82
 )
 
 require (
