@@ -7,7 +7,6 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/jakecoffman/cp"
-	"golang.org/x/image/colornames"
 )
 
 const (
@@ -27,7 +26,7 @@ const (
 	playerAirAccel        = playerVelocity / playerAirAccelTime
 	jumpHeight            = 60.0
 	//
-	playerElasticity = 0.3
+	playerElasticity = 0.1
 )
 
 var (
@@ -36,8 +35,8 @@ var (
 )
 
 func init() {
-	imagePlayer.Fill(colornames.Slategray)
-	imageGun.Fill(colornames.Orange)
+	imagePlayer.Fill(colorPlayer)
+	imageGun.Fill(colorGun)
 }
 
 type player struct {
