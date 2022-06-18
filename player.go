@@ -56,9 +56,9 @@ func newPlayer(pos cp.Vector) *player {
 	}
 
 	player.body = cp.NewBody(1, cp.INFINITY)
-	player.body.SetPosition(pos)
+	player.body.SetPosition(cp.Vector{X: pos.X, Y: pos.Y})
 	player.body.SetVelocityUpdateFunc(playerUpdateVelocity)
-	player.shape = cp.NewBox(player.body, playerWidth, playerHeight, playerHeight/2.0)
+	player.shape = cp.NewBox(player.body, playerWidth, playerHeight, 0)
 	player.shape.SetElasticity(playerElasticity)
 
 	return player
@@ -69,7 +69,7 @@ func (p *player) update(input *input) {
 	p.pos = p.body.Position()
 
 	// Update gun position
-	p.posGun = p.pos.Add(cp.Vector{X: playerWidth / 2.0, Y: playerHeight / 2.0})
+	p.posGun = p.pos
 
 	// Update gun angle
 	distX := input.cursorPos.X - p.posGun.X
@@ -125,7 +125,7 @@ func (p *player) updateGeometryMatrices() {
 	// Player
 	p.drawOptionsPlayer.GeoM.Reset()
 	p.drawOptionsPlayer.GeoM.Scale(playerWidth, playerHeight)
-	p.drawOptionsPlayer.GeoM.Translate(p.pos.X, p.pos.Y)
+	p.drawOptionsPlayer.GeoM.Translate(p.pos.X-playerWidth/2.0, p.pos.Y-playerHeight/2.0)
 
 	// Gun
 	p.drawOptionsGun.GeoM.Reset()

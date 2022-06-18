@@ -27,19 +27,22 @@ const (
 	WallElasticity       = 1
 	wallFriction         = 1
 	wallWidth            = 30
-	spaceIterations      = 10
+	spaceIterations      = 5
 )
 
 const (
-	wallLeftCenterX      = wallWidth
-	wallLeftCenterY      = screenHeight - 2.0*screenHeight/5.0
-	wallLeftCenterWidth  = screenWidth / 4.0
-	wallRightCenterX     = screenWidth - wallWidth - screenWidth/4.0
-	wallRightCenterY     = 2.0 * screenHeight / 5.0
-	wallRightCenterWidth = screenWidth / 4.0
-	wallTopCenterX       = screenWidth / 4.0
-	wallTopCenterY       = wallWidth
-	wallTopCenterHeight  = screenHeight / 4.0
+	wallLeftCenterX        = wallWidth
+	wallLeftCenterY        = screenHeight - 2.0*screenHeight/5.0
+	wallLeftCenterWidth    = screenWidth / 4.0
+	wallRightCenterX       = screenWidth - wallWidth - screenWidth/4.0
+	wallRightCenterY       = 2.0 * screenHeight / 5.0
+	wallRightCenterWidth   = screenWidth / 4.0
+	wallTopCenterX         = screenWidth / 4.0
+	wallTopCenterY         = wallWidth
+	wallTopCenterHeight    = screenHeight / 4.0
+	wallBottomCenterX      = wallRightCenterX
+	wallBottomCenterY      = screenHeight - wallWidth - wallBottomCenterHeight
+	wallBottomCenterHeight = screenHeight / 4.0
 )
 
 var (
@@ -50,16 +53,17 @@ var (
 )
 
 var (
-	imageWall                  = ebiten.NewImage(1, 1)
-	imageCursor                = ebiten.NewImage(crosshairRadius*2, crosshairRadius*2)
-	drawOptionsCursor          ebiten.DrawImageOptions
-	drawOptionsWallTop         ebiten.DrawImageOptions
-	drawOptionsWallLeft        ebiten.DrawImageOptions
-	drawOptionsWallRight       ebiten.DrawImageOptions
-	drawOptionsWallBottom      ebiten.DrawImageOptions
-	drawOptionsWallLeftCenter  ebiten.DrawImageOptions
-	drawOptionsWallRightCenter ebiten.DrawImageOptions
-	drawOptionsWallTopCenter   ebiten.DrawImageOptions
+	imageWall                   = ebiten.NewImage(1, 1)
+	imageCursor                 = ebiten.NewImage(crosshairRadius*2, crosshairRadius*2)
+	drawOptionsCursor           ebiten.DrawImageOptions
+	drawOptionsWallTop          ebiten.DrawImageOptions
+	drawOptionsWallLeft         ebiten.DrawImageOptions
+	drawOptionsWallRight        ebiten.DrawImageOptions
+	drawOptionsWallBottom       ebiten.DrawImageOptions
+	drawOptionsWallLeftCenter   ebiten.DrawImageOptions
+	drawOptionsWallRightCenter  ebiten.DrawImageOptions
+	drawOptionsWallTopCenter    ebiten.DrawImageOptions
+	drawOptionsWallBottomCenter ebiten.DrawImageOptions
 )
 
 func init() {
@@ -83,6 +87,9 @@ func init() {
 
 	drawOptionsWallTopCenter.GeoM.Scale(wallWidth, wallTopCenterHeight)
 	drawOptionsWallTopCenter.GeoM.Translate(wallTopCenterX, wallTopCenterY)
+
+	drawOptionsWallBottomCenter.GeoM.Scale(wallWidth, wallBottomCenterHeight)
+	drawOptionsWallBottomCenter.GeoM.Translate(wallBottomCenterX, wallBottomCenterY)
 
 	initCursorImage()
 }
@@ -138,11 +145,15 @@ func newGame() *game {
 	shape.SetElasticity(WallElasticity)
 	shape.SetFriction(wallFriction)
 	shape = space.AddShape(cp.NewSegment(space.StaticBody, cp.Vector{X: wallRightCenterX + wallRadius, Y: wallRightCenterY + wallRadius},
-		cp.Vector{X: wallRightCenterX + wallRightCenterWidth - wallRadius, Y: wallRightCenterY + wallRadius}, 0)) // right center wall
+		cp.Vector{X: wallRightCenterX + wallRightCenterWidth - wallRadius, Y: wallRightCenterY + wallRadius}, wallRadius)) // right center wall
 	shape.SetElasticity(WallElasticity)
 	shape.SetFriction(wallFriction)
 	shape = space.AddShape(cp.NewSegment(space.StaticBody, cp.Vector{X: wallTopCenterX + wallRadius, Y: wallTopCenterY + wallRadius},
-		cp.Vector{X: wallTopCenterX + wallRadius, Y: wallTopCenterY + wallTopCenterHeight - wallRadius}, 0)) // top center wall
+		cp.Vector{X: wallTopCenterX + wallRadius, Y: wallTopCenterY + wallTopCenterHeight - wallRadius}, wallRadius)) // top center wall
+	shape.SetElasticity(WallElasticity)
+	shape.SetFriction(wallFriction)
+	shape = space.AddShape(cp.NewSegment(space.StaticBody, cp.Vector{X: wallBottomCenterX + wallRadius, Y: wallBottomCenterY + wallRadius},
+		cp.Vector{X: wallBottomCenterX + wallRadius, Y: wallBottomCenterY + wallBottomCenterHeight - wallRadius}, wallRadius)) // bottom center wall
 	shape.SetElasticity(WallElasticity)
 	shape.SetFriction(wallFriction)
 
@@ -177,6 +188,7 @@ func (g *game) Draw(screen *ebiten.Image) {
 	screen.DrawImage(imageWall, &drawOptionsWallLeftCenter)
 	screen.DrawImage(imageWall, &drawOptionsWallRightCenter)
 	screen.DrawImage(imageWall, &drawOptionsWallTopCenter)
+	screen.DrawImage(imageWall, &drawOptionsWallBottomCenter)
 
 	// Draw player and its gun
 	g.player.draw(screen)
