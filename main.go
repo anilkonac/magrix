@@ -69,7 +69,7 @@ func newGame() *game {
 	space.SetGravity(cp.Vector{X: 0, Y: gravity})
 
 	// Add player to the space
-	space.AddBody(game.player.shape.Body())
+	space.AddBody(game.player.body)
 	space.AddShape(game.player.shape)
 	game.space = space
 

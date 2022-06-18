@@ -18,10 +18,15 @@ const (
 )
 
 const (
-	gravity               = 500.0
+	gravity = 500.0
+	// Taken from cp-examples/player and modified
 	playerVelocity        = 400.0
-	playerGroundAccelTime = 0.1                                    // Taken from cp-examples/player
-	playerGroundAccel     = playerVelocity / playerGroundAccelTime // Taken from cp-examples/player
+	playerGroundAccelTime = 0.1
+	playerGroundAccel     = playerVelocity / playerGroundAccelTime
+	playerAirAccelTime    = 0.5
+	playerAirAccel        = playerVelocity / playerAirAccelTime
+	jumpHeight            = 100.0
+	//
 )
 
 var (
@@ -42,6 +47,7 @@ type player struct {
 	body              *cp.Body
 	drawOptionsPlayer ebiten.DrawImageOptions
 	drawOptionsGun    ebiten.DrawImageOptions
+	onGround          bool
 }
 
 func newPlayer(pos cp.Vector) *player {
@@ -78,16 +84,35 @@ func (p *player) update(input *input) {
 		surfaceV.X = playerVelocity
 	}
 	p.shape.SetSurfaceV(surfaceV)
-	// if grounded { // TODO
-	p.shape.SetFriction(playerGroundAccel / gravity) // Taken from cp-examples/player
-	// } else {
-	// player.shape.SetFriction(0)
-	// }
-	// fmt.Printf("%.2f\t", p.shape.Friction())
+	if p.onGround { // TODO
+		p.shape.SetFriction(playerGroundAccel / gravity) // Taken from cp-examples/player
+	} else {
+		p.shape.SetFriction(0)
+	}
+
+	// Grab the grounding normal from last frame - Taken from cp-examples/player
+	groundNormal := cp.Vector{}
+	p.body.EachArbiter(func(arb *cp.Arbiter) {
+		n := arb.Normal() //.Neg()
+
+		if n.Y > groundNormal.Y {
+			groundNormal = n
+		}
+	})
+	p.onGround = groundNormal.Y > 0
+
+	if input.up && p.onGround {
+		jumpV := math.Sqrt(2.0 * jumpHeight * gravity) // Taken from cp-examples/player
+		p.body.SetVelocityVector(p.body.Velocity().Add(cp.Vector{X: 0, Y: -jumpV}))
+	}
+	// Apply air control if not on ground
+	if !p.onGround {
+		// p.body.SetVelocity(cp.LerpConst(v.X, -surfaceV.X, playerAirAccel*deltaTime), v.Y)
+		p.body.SetVelocityVector(p.body.Velocity().Add(cp.Vector{X: -surfaceV.X * deltaTime, Y: 0}))
+	}
 
 	// v := p.body.Velocity()
-	// fmt.Printf("player vel x: %.1f\ty: %1.f\n", v.X, v.Y)
-
+	// fmt.Printf("Friction: %.2f\tVel X: %.2f\tVel Y: %.2f\n", p.shape.Friction(), v.X, v.Y)
 	p.updateGeometryMatrices()
 }
 
