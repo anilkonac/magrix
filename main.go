@@ -23,6 +23,8 @@ const (
 	landY                = (1.0 - ratioLandHeight) * screenHeight
 	crosshairRadius      = 10
 	crosshairInnerRadius = 3
+	landElasticity       = 0.5
+	landFriction         = 1
 )
 
 var (
@@ -75,8 +77,8 @@ func newGame() *game {
 
 	// Add Land to the space
 	shape := space.AddShape(cp.NewSegment(space.StaticBody, cp.Vector{X: 0, Y: landY}, cp.Vector{X: screenWidth, Y: landY}, 0))
-	// shape.SetElasticity(1)
-	shape.SetFriction(1)
+	shape.SetElasticity(landElasticity)
+	shape.SetFriction(landFriction)
 
 	return game
 }
