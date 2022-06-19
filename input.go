@@ -6,8 +6,8 @@ import (
 )
 
 type input struct {
-	cursorPos   cp.Vector
-	up, down    bool
+	cursorPos cp.Vector
+	up/*, down*/ bool
 	left, right bool
 }
 
