@@ -17,7 +17,9 @@ const (
 )
 
 const (
-	gravity = 1000.0
+	gravity          = 1000.0
+	playerMass       = 1
+	playerElasticity = 0.0
 	// Taken from cp-examples/player and modified
 	playerVelocity        = 400.0
 	playerGroundAccelTime = 0.1
@@ -26,7 +28,11 @@ const (
 	playerAirAccel        = playerVelocity / playerAirAccelTime
 	jumpHeight            = 60.0
 	//
-	playerElasticity = 0.1
+)
+
+const (
+	gunRange     = screenWidth + screenHeight
+	gunForceMult = 100
 )
 
 var (
@@ -56,7 +62,7 @@ func newPlayer(pos cp.Vector) *player {
 		pos: pos,
 	}
 
-	player.body = cp.NewBody(1, cp.INFINITY)
+	player.body = cp.NewBody(playerMass, cp.INFINITY)
 	player.body.SetPosition(cp.Vector{X: pos.X, Y: pos.Y})
 	player.body.SetVelocityUpdateFunc(playerUpdateVelocity)
 	player.shape = cp.NewBox(player.body, playerWidth, playerHeight, 0)
@@ -65,7 +71,7 @@ func newPlayer(pos cp.Vector) *player {
 	return player
 }
 
-func (p *player) update(input *input) {
+func (p *player) update(input *input, rayHitInfo *cp.SegmentQueryInfo) {
 	// Update position
 	p.pos = p.body.Position()
 
@@ -80,7 +86,7 @@ func (p *player) update(input *input) {
 	p.checkOnGround()
 
 	// Raycast
-	const rayLength = screenWidth + screenHeight
+	const rayLength = gunRange
 	p.gunRay[0] = p.posGun.Add(cp.Vector{
 		X: gunWidth * math.Cos(p.angleGun), Y: gunWidth * math.Sin(p.angleGun),
 	})
@@ -88,7 +94,7 @@ func (p *player) update(input *input) {
 		X: rayLength * math.Cos(p.angleGun), Y: rayLength * math.Sin(p.angleGun),
 	})
 
-	p.handleInputs(input)
+	p.handleInputs(input, rayHitInfo)
 
 	// v := p.body.Velocity()
 	// fmt.Printf("Friction: %.2f\tVel X: %.2f\tVel Y: %.2f\n", p.shape.Friction(), v.X, v.Y)
@@ -108,7 +114,7 @@ func (p *player) checkOnGround() {
 	p.onGround = groundNormal.Y > 0
 }
 
-func (p *player) handleInputs(input *input) {
+func (p *player) handleInputs(input *input, rayHitInfo *cp.SegmentQueryInfo) {
 	// Handle inputs
 	var surfaceV cp.Vector
 	if input.right {
@@ -133,6 +139,16 @@ func (p *player) handleInputs(input *input) {
 		newVelX := cp.Clamp(v.X-surfaceV.X*deltaTime, -playerVelocity, playerVelocity)
 		p.body.SetVelocity(newVelX, v.Y)
 	}
+
+	// Apply magnetic force if fire is pressed
+	var force cp.Vector
+	if input.fire && rayHitInfo.Alpha >= 0.0001 {
+		forceDirection := rayHitInfo.Point.Sub(p.pos).Normalize()
+		force = forceDirection.Mult(gunForceMult).Mult(1 / (rayHitInfo.Alpha * rayHitInfo.Alpha))
+		force = force.Clamp(1500)
+		p.body.SetForce(force)
+	}
+	// fmt.Printf("Player X: %.2f\tY:%.2f\tForce X: %.2f\tY:%.2f\n", p.pos.X, p.pos.Y, force.X, force.Y)
 }
 
 func (p *player) updateGeometryMatrices() {

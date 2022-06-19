@@ -3,6 +3,7 @@
 package main
 
 import (
+	"fmt"
 	"image/color"
 	"log"
 
@@ -76,17 +77,16 @@ func initCursorImage() {
 
 // game implements ebiten.game interface.
 type game struct {
-	player    player
-	space     *cp.Space
-	walls     []*wall
-	input     input
-	rayHitPos []cp.Vector
+	player     player
+	space      *cp.Space
+	walls      []*wall
+	input      input
+	rayHitInfo cp.SegmentQueryInfo
 }
 
 func newGame() *game {
 	game := &game{
-		player:    *newPlayer(cp.Vector{X: screenWidth / 2.0, Y: screenHeight / 2.0}),
-		rayHitPos: make([]cp.Vector, 0, 3),
+		player: *newPlayer(cp.Vector{X: screenWidth / 2.0, Y: screenHeight / 2.0}),
 	}
 
 	space := cp.NewSpace()
@@ -136,22 +136,21 @@ func (g *game) Update() error {
 	// Update input states(mouse pos and pressed keys)
 	g.input.update()
 
-	// Update player and player's gun
-	g.player.update(&g.input)
-
 	// Raycast
-	g.rayHitPos = make([]cp.Vector, 0, 3)
 	gunRay := g.player.gunRay
 	var info cp.SegmentQueryInfo
 	var success bool
+	var minAlpha float64 = 1.5
 	for _, wall := range g.walls {
 		success = wall.shape.SegmentQuery(gunRay[0], gunRay[1], 0, &info)
-		if success {
-			// fmt.Printf("X: %.2f\tY: %.2f\n", info.Point.X, info.Point.Y)
-			g.rayHitPos = append(g.rayHitPos, info.Point)
+		if success && info.Alpha < minAlpha {
+			g.rayHitInfo = info
+			minAlpha = info.Alpha
 		}
 	}
-	// println(len(g.rayHitPos))
+
+	// Update player and player's gun
+	g.player.update(&g.input, &g.rayHitInfo)
 
 	// Update Crosshair geometry matrix
 	drawOptionsCursor.GeoM.Reset()
@@ -174,16 +173,14 @@ func (g *game) Draw(screen *ebiten.Image) {
 	// Draw crosshair
 	screen.DrawImage(imageCursor, &drawOptionsCursor)
 
-	// Draw rayhits
-	for _, hitPos := range g.rayHitPos {
-		const rayHitImageRadius = rayHitImageWidth / 2.0
-		drawOptionsRayHit.GeoM.Reset()
-		drawOptionsRayHit.GeoM.Translate(hitPos.X-rayHitImageRadius, hitPos.Y-rayHitImageRadius)
-		screen.DrawImage(imageRayHit, &drawOptionsRayHit)
-	}
+	// Draw rayhit
+	const rayHitImageRadius = rayHitImageWidth / 2.0
+	drawOptionsRayHit.GeoM.Reset()
+	drawOptionsRayHit.GeoM.Translate(g.rayHitInfo.Point.X-rayHitImageRadius, g.rayHitInfo.Point.Y-rayHitImageRadius)
+	screen.DrawImage(imageRayHit, &drawOptionsRayHit)
 
 	// Print fps
-	// ebitenutil.DebugPrint(screen, fmt.Sprintf("TPS: %.2f  FPS: %.2f", ebiten.CurrentTPS(), ebiten.CurrentFPS()))
+	ebitenutil.DebugPrint(screen, fmt.Sprintf("TPS: %.2f  FPS: %.2f", ebiten.CurrentTPS(), ebiten.CurrentFPS()))
 	// ebitenutil.DebugPrintAt(screen, fmt.Sprintf("X: %.0f, Y: %.0f", g.fCursorX, g.fCursorY), 0, 15)
 }
 
