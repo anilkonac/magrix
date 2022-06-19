@@ -48,6 +48,7 @@ type player struct {
 	drawOptionsPlayer ebiten.DrawImageOptions
 	drawOptionsGun    ebiten.DrawImageOptions
 	onGround          bool
+	gunRay            [2]cp.Vector
 }
 
 func newPlayer(pos cp.Vector) *player {
@@ -76,6 +77,25 @@ func (p *player) update(input *input) {
 	distY := input.cursorPos.Y - p.posGun.Y
 	p.angleGun = math.Atan2(distY, distX)
 
+	p.checkOnGround()
+
+	// Raycast
+	const rayLength = screenWidth + screenHeight
+	p.gunRay[0] = p.posGun.Add(cp.Vector{
+		X: gunWidth * math.Cos(p.angleGun), Y: gunWidth * math.Sin(p.angleGun),
+	})
+	p.gunRay[1] = p.gunRay[0].Add(cp.Vector{
+		X: rayLength * math.Cos(p.angleGun), Y: rayLength * math.Sin(p.angleGun),
+	})
+
+	p.handleInputs(input)
+
+	// v := p.body.Velocity()
+	// fmt.Printf("Friction: %.2f\tVel X: %.2f\tVel Y: %.2f\n", p.shape.Friction(), v.X, v.Y)
+	p.updateGeometryMatrices()
+}
+
+func (p *player) checkOnGround() {
 	// Grab the grounding normal from last frame - Taken from cp-examples/player
 	groundNormal := cp.Vector{}
 	p.body.EachArbiter(func(arb *cp.Arbiter) {
@@ -86,12 +106,6 @@ func (p *player) update(input *input) {
 		}
 	})
 	p.onGround = groundNormal.Y > 0
-
-	p.handleInputs(input)
-
-	// v := p.body.Velocity()
-	// fmt.Printf("Friction: %.2f\tVel X: %.2f\tVel Y: %.2f\n", p.shape.Friction(), v.X, v.Y)
-	p.updateGeometryMatrices()
 }
 
 func (p *player) handleInputs(input *input) {
@@ -141,6 +155,8 @@ func (p *player) draw(dst *ebiten.Image) {
 
 	// Draw prototype gun
 	dst.DrawImage(imageGun, &p.drawOptionsGun)
+
+	// ebitenutil.DrawLine(dst, p.gunRay[0].X, p.gunRay[0].Y, p.gunRay[1].X, p.gunRay[1].Y, colorCrosshair)
 }
 
 func playerUpdateVelocity(body *cp.Body, gravity cp.Vector, damping, dt float64) {

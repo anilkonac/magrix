@@ -18,6 +18,7 @@ type wall struct {
 	drawOptions ebiten.DrawImageOptions
 }
 
+// v1 has to be either left or top position
 func newWall(x1, y1, x2, y2, radius float64, space *cp.Space) *wall {
 	shape := space.AddShape(cp.NewSegment(space.StaticBody, cp.Vector{X: x1, Y: y1}, cp.Vector{X: x2, Y: y2}, radius))
 	shape.SetElasticity(wallElasticity)
