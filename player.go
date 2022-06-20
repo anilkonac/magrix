@@ -32,9 +32,9 @@ const (
 
 const (
 	gunRange     = screenWidth + screenHeight
-	gunForceMult = 100
+	gunForceMult = 60
 	gunForceMax  = 1500
-	gunMinAlpha  = 0.0001
+	gunMinAlpha  = 1e-5 // required to prevent player pos to go NaN
 )
 
 var (
@@ -92,9 +92,7 @@ func (p *player) update(input *input, rayHitInfo *cp.SegmentQueryInfo) {
 
 	// Raycast
 	const rayLength = gunRange
-	p.gunRay[0] = p.posGun.Add(cp.Vector{
-		X: gunWidth * math.Cos(p.angleGun), Y: gunWidth * math.Sin(p.angleGun),
-	})
+	p.gunRay[0] = p.posGun
 	p.gunRay[1] = p.gunRay[0].Add(cp.Vector{
 		X: rayLength * math.Cos(p.angleGun), Y: rayLength * math.Sin(p.angleGun),
 	})
