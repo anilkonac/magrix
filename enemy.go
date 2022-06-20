@@ -79,8 +79,8 @@ func enemyUpdateVelocity(body *cp.Body, gravity cp.Vector, damping, dt float64) 
 func (e *enemy) standUpBot() {
 	const standUpForceY = -30000
 	const standUpAngularVelocity = -35.0
-	const checkIntervalSec = 2.0
-	const checkEpsilon = 2.0
+	const checkIntervalSec = 3.0
+	const checkEpsilon = 1.0
 
 	ticker := time.NewTicker(time.Second * checkIntervalSec)
 	for range ticker.C {

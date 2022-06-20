@@ -89,7 +89,7 @@ func initCursorImage() {
 // game implements ebiten.game interface.
 type game struct {
 	player     player
-	enemy      enemy
+	enemies    []*enemy
 	walls      []*wall
 	space      *cp.Space
 	input      input
@@ -103,10 +103,11 @@ func newGame() *game {
 
 	game := &game{
 		player: *newPlayer(cp.Vector{X: screenWidth / 2.0, Y: screenHeight / 2.0}, space),
-		enemy:  *newEnemy(cp.Vector{X: 778, Y: 149}, space),
 		space:  space,
 	}
 
+	game.enemies = append(game.enemies, newEnemy(cp.Vector{X: 778, Y: 200}, space))
+	game.enemies = append(game.enemies, newEnemy(cp.Vector{X: 100, Y: 200}, space))
 	addWalls(space, &game.walls)
 
 	return game
@@ -159,11 +160,13 @@ func (g *game) Update() error {
 
 	// Sen negation of the player's gun force
 	var force cp.Vector
-	if g.rayHitInfo.Shape == g.enemy.shape {
-		force = g.player.gunForce.Neg()
-		g.enemy.update(&force)
-	} else {
-		g.enemy.update(nil)
+	for _, enemy := range g.enemies {
+		if g.rayHitInfo.Shape == enemy.shape {
+			force = g.player.gunForce.Neg()
+			enemy.update(&force)
+		} else {
+			enemy.update(nil)
+		}
 	}
 
 	// Update geometry matrices
@@ -191,10 +194,13 @@ func (g *game) rayCast() {
 	}
 
 	// Check enemy
-	success = g.enemy.shape.SegmentQuery(gunRay[0], gunRay[1], 0, &info)
-	if success && info.Alpha < g.rayHitInfo.Alpha {
-		g.rayHitInfo = info
+	for _, enemy := range g.enemies {
+		success = enemy.shape.SegmentQuery(gunRay[0], gunRay[1], 0, &info)
+		if success && info.Alpha < g.rayHitInfo.Alpha {
+			g.rayHitInfo = info
+		}
 	}
+
 }
 
 // Draw is called every frame (typically 1/60[s] for 60Hz display).
@@ -210,7 +216,9 @@ func (g *game) Draw(screen *ebiten.Image) {
 	g.player.draw(screen)
 
 	// Draw enemy
-	g.enemy.draw(screen)
+	for _, enemy := range g.enemies {
+		enemy.draw(screen)
+	}
 
 	// Draw crosshair
 	screen.DrawImage(imageCursor, &drawOptionsCursor)
