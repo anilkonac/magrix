@@ -1,16 +1,19 @@
 package main
 
 import (
+	"math"
+	"time"
+
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/jakecoffman/cp"
 )
 
 const (
-	enemyFriction = 1.00
-	enemyMass     = playerMass
+	enemyMass     = 2.0
+	enemyFriction = 0.75
 	enemyWidth    = playerWidth
 	enemyHeight   = playerHeight
-	enemyMoment   = 100
+	enemyMoment   = 75
 )
 
 var (
@@ -44,6 +47,8 @@ func newEnemy(pos cp.Vector, space *cp.Space) *enemy {
 	space.AddBody(enemy.body)
 	space.AddShape(enemy.shape)
 
+	go enemy.standUpBot()
+
 	return enemy
 }
 
@@ -68,4 +73,24 @@ func (e *enemy) draw(dst *ebiten.Image) {
 
 func enemyUpdateVelocity(body *cp.Body, gravity cp.Vector, damping, dt float64) {
 	body.UpdateVelocity(gravity, damping, dt)
+}
+
+// Goroutine
+func (e *enemy) standUpBot() {
+	const standUpForceY = -30000
+	const standUpAngularVelocity = -35.0
+	const checkIntervalSec = 2.0
+	const checkEpsilon = 2.0
+	ticker := time.NewTicker(time.Second * checkIntervalSec)
+	for range ticker.C {
+		angleDegMod := math.Mod(e.body.Angle()*cp.DegreeConst, 180)
+
+		if math.Abs(angleDegMod-90) < checkEpsilon {
+			e.body.SetAngularVelocity(-standUpAngularVelocity)
+			e.body.SetForce(cp.Vector{X: 0, Y: standUpForceY})
+		} else if math.Abs(angleDegMod+90) < checkEpsilon {
+			e.body.SetAngularVelocity(standUpAngularVelocity)
+			e.body.SetForce(cp.Vector{X: 0, Y: standUpForceY})
+		}
+	}
 }

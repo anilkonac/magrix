@@ -21,6 +21,7 @@ const (
 	playerMass       = 1
 	playerElasticity = 0.0
 	// Taken from cp-examples/player and modified
+	playerFriction        = playerGroundAccel / (2 * gravity)
 	playerVelocity        = 400.0
 	playerGroundAccelTime = 0.1
 	playerGroundAccel     = playerVelocity / playerGroundAccelTime
@@ -32,7 +33,7 @@ const (
 
 const (
 	gunRange     = screenWidth + screenHeight
-	gunForceMult = 60
+	gunForceMult = 45
 	gunForceMax  = 1500
 	gunMinAlpha  = 1e-5 // required to prevent player pos to go NaN
 )
@@ -141,7 +142,7 @@ func (p *player) handleInputs(input *input, rayHitInfo *cp.SegmentQueryInfo) {
 	}
 	p.shape.SetSurfaceV(surfaceV)
 	if p.onGround {
-		p.shape.SetFriction(playerGroundAccel / gravity) // Taken from cp-examples/player
+		p.shape.SetFriction(playerFriction)
 	} else {
 		p.shape.SetFriction(0)
 	}
