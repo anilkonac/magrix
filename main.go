@@ -21,8 +21,9 @@ const (
 const (
 	ratioLandHeight      = 1.0 / 4.0
 	landY                = (1.0 - ratioLandHeight) * screenHeight
-	crosshairRadius      = 10
-	crosshairInnerRadius = 3
+	crosshairRadius      = 14
+	crosshairInnerRadius = 4
+	rayHitImageWidth     = 16
 	wallElasticity       = 1
 	wallFriction         = 1
 	wallWidth            = 30
@@ -36,17 +37,31 @@ var (
 	colorGun        = color.RGBA{242, 129, 35, 255}  // ~ Princeton Orange
 	colorPlayer     = color.RGBA{155, 201, 149, 255} // ~ Dark Sea Green
 	colorCrosshair  = color.RGBA{216, 17, 89, 255}   // ~ Ruby
+	colorRayHit     = color.RGBA{7, 160, 195, 255}   // ~ Blue Green
 )
 
 var (
 	imageWall         = ebiten.NewImage(1, 1)
 	imageCursor       = ebiten.NewImage(crosshairRadius*2, crosshairRadius*2)
+	imageRayHit       = ebiten.NewImage(rayHitImageWidth, rayHitImageWidth)
 	drawOptionsCursor ebiten.DrawImageOptions
+	drawOptionsRayHit ebiten.DrawImageOptions
 )
 
 func init() {
-
 	initCursorImage()
+
+	shader, err := ebiten.NewShader(circle_go)
+	if err != nil {
+		panic(err)
+	}
+
+	imageRayHit.DrawRectShader(rayHitImageWidth, rayHitImageWidth, shader, &ebiten.DrawRectShaderOptions{
+		Uniforms: map[string]interface{}{
+			"Radius": float32(rayHitImageWidth / 2.0),
+			"Color":  []float32{float32(colorRayHit.R / 0xf), float32(colorRayHit.G / 0xf), float32(colorRayHit.B / 0xf), float32(colorRayHit.A / 0xf)},
+		},
+	})
 }
 
 func initCursorImage() {
@@ -62,10 +77,11 @@ func initCursorImage() {
 
 // game implements ebiten.game interface.
 type game struct {
-	player player
-	space  *cp.Space
-	walls  []*wall
-	input  input
+	player     player
+	space      *cp.Space
+	walls      []*wall
+	input      input
+	rayHitInfo cp.SegmentQueryInfo
 }
 
 func newGame() *game {
@@ -120,8 +136,20 @@ func (g *game) Update() error {
 	// Update input states(mouse pos and pressed keys)
 	g.input.update()
 
+	// Raycast
+	gunRay := g.player.gunRay
+	var info cp.SegmentQueryInfo
+	var success bool
+	g.rayHitInfo.Alpha = 1.5
+	for _, wall := range g.walls {
+		success = wall.shape.SegmentQuery(gunRay[0], gunRay[1], 0, &info)
+		if success && info.Alpha < g.rayHitInfo.Alpha {
+			g.rayHitInfo = info
+		}
+	}
+
 	// Update player and player's gun
-	g.player.update(&g.input)
+	g.player.update(&g.input, &g.rayHitInfo)
 
 	// Update Crosshair geometry matrix
 	drawOptionsCursor.GeoM.Reset()
@@ -143,6 +171,12 @@ func (g *game) Draw(screen *ebiten.Image) {
 
 	// Draw crosshair
 	screen.DrawImage(imageCursor, &drawOptionsCursor)
+
+	// Draw rayhit
+	const rayHitImageRadius = rayHitImageWidth / 2.0
+	drawOptionsRayHit.GeoM.Reset()
+	drawOptionsRayHit.GeoM.Translate(g.rayHitInfo.Point.X-rayHitImageRadius, g.rayHitInfo.Point.Y-rayHitImageRadius)
+	screen.DrawImage(imageRayHit, &drawOptionsRayHit)
 
 	// Print fps
 	ebitenutil.DebugPrint(screen, fmt.Sprintf("TPS: %.2f  FPS: %.2f", ebiten.CurrentTPS(), ebiten.CurrentFPS()))

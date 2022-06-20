@@ -17,7 +17,9 @@ const (
 )
 
 const (
-	gravity = 1000.0
+	gravity          = 1000.0
+	playerMass       = 1
+	playerElasticity = 0.0
 	// Taken from cp-examples/player and modified
 	playerVelocity        = 400.0
 	playerGroundAccelTime = 0.1
@@ -26,17 +28,25 @@ const (
 	playerAirAccel        = playerVelocity / playerAirAccelTime
 	jumpHeight            = 60.0
 	//
-	playerElasticity = 0.1
+)
+
+const (
+	gunRange     = screenWidth + screenHeight
+	gunForceMult = 60
+	gunForceMax  = 1500
+	gunMinAlpha  = 1e-5 // required to prevent player pos to go NaN
 )
 
 var (
-	imagePlayer = ebiten.NewImage(1, 1)
-	imageGun    = ebiten.NewImage(1, 1)
+	imagePlayer    = ebiten.NewImage(1, 1)
+	imageGun       = ebiten.NewImage(1, 1)
+	imageGunActive = ebiten.NewImage(1, 1)
 )
 
 func init() {
 	imagePlayer.Fill(colorPlayer)
 	imageGun.Fill(colorGun)
+	imageGunActive.Fill(colorCrosshair)
 }
 
 type player struct {
@@ -48,6 +58,8 @@ type player struct {
 	drawOptionsPlayer ebiten.DrawImageOptions
 	drawOptionsGun    ebiten.DrawImageOptions
 	onGround          bool
+	gunRay            [2]cp.Vector
+	gunActive         bool
 }
 
 func newPlayer(pos cp.Vector) *player {
@@ -55,7 +67,7 @@ func newPlayer(pos cp.Vector) *player {
 		pos: pos,
 	}
 
-	player.body = cp.NewBody(1, cp.INFINITY)
+	player.body = cp.NewBody(playerMass, cp.INFINITY)
 	player.body.SetPosition(cp.Vector{X: pos.X, Y: pos.Y})
 	player.body.SetVelocityUpdateFunc(playerUpdateVelocity)
 	player.shape = cp.NewBox(player.body, playerWidth, playerHeight, 0)
@@ -64,7 +76,7 @@ func newPlayer(pos cp.Vector) *player {
 	return player
 }
 
-func (p *player) update(input *input) {
+func (p *player) update(input *input, rayHitInfo *cp.SegmentQueryInfo) {
 	// Update position
 	p.pos = p.body.Position()
 
@@ -76,6 +88,23 @@ func (p *player) update(input *input) {
 	distY := input.cursorPos.Y - p.posGun.Y
 	p.angleGun = math.Atan2(distY, distX)
 
+	p.checkOnGround()
+
+	// Raycast
+	const rayLength = gunRange
+	p.gunRay[0] = p.posGun
+	p.gunRay[1] = p.gunRay[0].Add(cp.Vector{
+		X: rayLength * math.Cos(p.angleGun), Y: rayLength * math.Sin(p.angleGun),
+	})
+
+	p.handleInputs(input, rayHitInfo)
+
+	// v := p.body.Velocity()
+	// fmt.Printf("Friction: %.2f\tVel X: %.2f\tVel Y: %.2f\n", p.shape.Friction(), v.X, v.Y)
+	p.updateGeometryMatrices()
+}
+
+func (p *player) checkOnGround() {
 	// Grab the grounding normal from last frame - Taken from cp-examples/player
 	groundNormal := cp.Vector{}
 	p.body.EachArbiter(func(arb *cp.Arbiter) {
@@ -86,15 +115,9 @@ func (p *player) update(input *input) {
 		}
 	})
 	p.onGround = groundNormal.Y > 0
-
-	p.handleInputs(input)
-
-	// v := p.body.Velocity()
-	// fmt.Printf("Friction: %.2f\tVel X: %.2f\tVel Y: %.2f\n", p.shape.Friction(), v.X, v.Y)
-	p.updateGeometryMatrices()
 }
 
-func (p *player) handleInputs(input *input) {
+func (p *player) handleInputs(input *input, rayHitInfo *cp.SegmentQueryInfo) {
 	// Handle inputs
 	var surfaceV cp.Vector
 	if input.right {
@@ -119,6 +142,18 @@ func (p *player) handleInputs(input *input) {
 		newVelX := cp.Clamp(v.X-surfaceV.X*deltaTime, -playerVelocity, playerVelocity)
 		p.body.SetVelocity(newVelX, v.Y)
 	}
+
+	// Apply magnetic force if fire is pressed
+	var force cp.Vector
+	p.gunActive = false
+	if input.fire && rayHitInfo.Alpha >= gunMinAlpha {
+		forceDirection := rayHitInfo.Point.Sub(p.pos).Normalize()
+		force = forceDirection.Mult(gunForceMult).Mult(1 / (rayHitInfo.Alpha * rayHitInfo.Alpha))
+		force = force.Clamp(gunForceMax)
+		p.body.SetForce(force)
+		p.gunActive = true
+	}
+	// fmt.Printf("Player X: %.2f\tY:%.2f\tForce X: %.2f\tY:%.2f\n", p.pos.X, p.pos.Y, force.X, force.Y)
 }
 
 func (p *player) updateGeometryMatrices() {
@@ -140,7 +175,13 @@ func (p *player) draw(dst *ebiten.Image) {
 	dst.DrawImage(imagePlayer, &p.drawOptionsPlayer)
 
 	// Draw prototype gun
-	dst.DrawImage(imageGun, &p.drawOptionsGun)
+	if p.gunActive {
+		dst.DrawImage(imageGunActive, &p.drawOptionsGun)
+	} else {
+		dst.DrawImage(imageGun, &p.drawOptionsGun)
+	}
+
+	// ebitenutil.DrawLine(dst, p.gunRay[0].X, p.gunRay[0].Y, p.gunRay[1].X, p.gunRay[1].Y, colorCrosshair)
 }
 
 func playerUpdateVelocity(body *cp.Body, gravity cp.Vector, damping, dt float64) {
