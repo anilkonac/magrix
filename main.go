@@ -140,12 +140,11 @@ func (g *game) Update() error {
 	gunRay := g.player.gunRay
 	var info cp.SegmentQueryInfo
 	var success bool
-	var minAlpha float64 = 1.5
+	g.rayHitInfo.Alpha = 1.5
 	for _, wall := range g.walls {
 		success = wall.shape.SegmentQuery(gunRay[0], gunRay[1], 0, &info)
-		if success && info.Alpha < minAlpha {
+		if success && info.Alpha < g.rayHitInfo.Alpha {
 			g.rayHitInfo = info
-			minAlpha = info.Alpha
 		}
 	}
 

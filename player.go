@@ -33,16 +33,20 @@ const (
 const (
 	gunRange     = screenWidth + screenHeight
 	gunForceMult = 100
+	gunForceMax  = 1500
+	gunMinAlpha  = 0.0001
 )
 
 var (
-	imagePlayer = ebiten.NewImage(1, 1)
-	imageGun    = ebiten.NewImage(1, 1)
+	imagePlayer    = ebiten.NewImage(1, 1)
+	imageGun       = ebiten.NewImage(1, 1)
+	imageGunActive = ebiten.NewImage(1, 1)
 )
 
 func init() {
 	imagePlayer.Fill(colorPlayer)
 	imageGun.Fill(colorGun)
+	imageGunActive.Fill(colorCrosshair)
 }
 
 type player struct {
@@ -55,6 +59,7 @@ type player struct {
 	drawOptionsGun    ebiten.DrawImageOptions
 	onGround          bool
 	gunRay            [2]cp.Vector
+	gunActive         bool
 }
 
 func newPlayer(pos cp.Vector) *player {
@@ -142,11 +147,13 @@ func (p *player) handleInputs(input *input, rayHitInfo *cp.SegmentQueryInfo) {
 
 	// Apply magnetic force if fire is pressed
 	var force cp.Vector
-	if input.fire && rayHitInfo.Alpha >= 0.0001 {
+	p.gunActive = false
+	if input.fire && rayHitInfo.Alpha >= gunMinAlpha {
 		forceDirection := rayHitInfo.Point.Sub(p.pos).Normalize()
 		force = forceDirection.Mult(gunForceMult).Mult(1 / (rayHitInfo.Alpha * rayHitInfo.Alpha))
-		force = force.Clamp(1500)
+		force = force.Clamp(gunForceMax)
 		p.body.SetForce(force)
+		p.gunActive = true
 	}
 	// fmt.Printf("Player X: %.2f\tY:%.2f\tForce X: %.2f\tY:%.2f\n", p.pos.X, p.pos.Y, force.X, force.Y)
 }
@@ -170,7 +177,11 @@ func (p *player) draw(dst *ebiten.Image) {
 	dst.DrawImage(imagePlayer, &p.drawOptionsPlayer)
 
 	// Draw prototype gun
-	dst.DrawImage(imageGun, &p.drawOptionsGun)
+	if p.gunActive {
+		dst.DrawImage(imageGunActive, &p.drawOptionsGun)
+	} else {
+		dst.DrawImage(imageGun, &p.drawOptionsGun)
+	}
 
 	// ebitenutil.DrawLine(dst, p.gunRay[0].X, p.gunRay[0].Y, p.gunRay[1].X, p.gunRay[1].Y, colorCrosshair)
 }
