@@ -10,7 +10,10 @@ type input struct {
 	up/*, down*/ bool
 	left, right bool
 
-	fire bool
+	attract bool
+	repel   bool
+
+	escape bool
 }
 
 func (i *input) update() {
@@ -22,6 +25,9 @@ func (i *input) update() {
 	i.right = ebiten.IsKeyPressed(ebiten.KeyD) || ebiten.IsKeyPressed(ebiten.KeyRight)
 	i.left = ebiten.IsKeyPressed(ebiten.KeyA) || ebiten.IsKeyPressed(ebiten.KeyLeft)
 	i.up = ebiten.IsKeyPressed(ebiten.KeyW) || ebiten.IsKeyPressed(ebiten.KeyUp) || ebiten.IsKeyPressed(ebiten.KeySpace)
-	i.fire = ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft)
+	i.attract = ebiten.IsMouseButtonPressed(ebiten.MouseButtonRight)
+	i.repel = ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft)
+
+	i.escape = ebiten.IsKeyPressed(ebiten.KeyEscape)
 	// i.down = ebiten.IsKeyPressed(ebiten.KeyA) || ebiten.IsKeyPressed(ebiten.KeyDown) || ebiten.IsKeyPressed(ebiten.KeyControlLeft)
 }

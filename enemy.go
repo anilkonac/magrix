@@ -1,13 +1,25 @@
 package main
 
 import (
-	"fmt"
-
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/jakecoffman/cp"
 )
 
-const enemyFriction = 1.25
+const (
+	enemyFriction = 1.00
+	enemyMass     = playerMass
+	enemyWidth    = playerWidth
+	enemyHeight   = playerHeight
+	enemyMoment   = 100
+)
+
+var (
+	enemyImage = ebiten.NewImage(1, 1)
+)
+
+func init() {
+	enemyImage.Fill(colorEnemy)
+}
 
 type enemy struct {
 	pos         cp.Vector
@@ -21,11 +33,11 @@ func newEnemy(pos cp.Vector, space *cp.Space) *enemy {
 		pos: pos,
 	}
 
-	body := cp.NewBody(playerMass, cp.INFINITY)
+	body := cp.NewBody(enemyMass, enemyMoment)
 	body.SetPosition(cp.Vector{X: pos.X, Y: pos.Y})
 	body.SetVelocityUpdateFunc(enemyUpdateVelocity)
 	enemy.body = body
-	enemy.shape = cp.NewBox(enemy.body, playerWidth, playerHeight, 0)
+	enemy.shape = cp.NewBox(enemy.body, enemyWidth, enemyHeight, 0)
 	enemy.shape.SetElasticity(playerElasticity)
 	enemy.shape.SetFriction(enemyFriction)
 
@@ -42,16 +54,16 @@ func (e *enemy) update(force *cp.Vector) {
 		e.body.SetForce(*force)
 	}
 
+	angle := e.body.Angle()
 	e.drawOptions.GeoM.Reset()
-	e.drawOptions.GeoM.Scale(playerWidth, playerHeight)
-	e.drawOptions.GeoM.Translate(e.pos.X-playerWidth/2.0, e.pos.Y-playerHeight/2.0)
-
-	f := e.shape.Friction()
-	fmt.Printf("Enemy friction: %.2f\n", f)
+	e.drawOptions.GeoM.Scale(enemyWidth, enemyHeight)
+	e.drawOptions.GeoM.Translate(-enemyWidth/2.0, -enemyHeight/2.0)
+	e.drawOptions.GeoM.Rotate(angle)
+	e.drawOptions.GeoM.Translate(e.pos.X, e.pos.Y)
 }
 
 func (e *enemy) draw(dst *ebiten.Image) {
-	dst.DrawImage(imageGunActive, &e.drawOptions)
+	dst.DrawImage(enemyImage, &e.drawOptions)
 }
 
 func enemyUpdateVelocity(body *cp.Body, gravity cp.Vector, damping, dt float64) {

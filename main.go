@@ -35,18 +35,21 @@ var (
 	colorBackground = color.RGBA{124, 144, 160, 255} // ~ Light Slate Gray
 	colorWall       = color.RGBA{57, 62, 65, 255}    // ~ Onyx
 	colorGun        = color.RGBA{242, 129, 35, 255}  // ~ Princeton Orange
-	colorGunActive  = color.RGBA{216, 17, 89, 255}   // ~ Ruby
+	colorGunAttract = color.RGBA{216, 17, 89, 255}   // ~ Ruby
+	colorGunRepel   = color.RGBA{7, 160, 195, 255}   // ~ Blue Green
 	colorPlayer     = color.RGBA{155, 201, 149, 255} // ~ Dark Sea Green
 	colorCrosshair  = color.RGBA{255, 251, 255, 255} // ~ Snow
-	colorRayHit     = color.RGBA{7, 160, 195, 255}   // ~ Blue Green
+	colorEnemy      = color.RGBA{165, 1, 4, 255}     // ~ Rufous
 )
 
 var (
-	imageWall         = ebiten.NewImage(1, 1)
-	imageCursor       = ebiten.NewImage(crosshairRadius*2, crosshairRadius*2)
-	imageRayHit       = ebiten.NewImage(rayHitImageWidth, rayHitImageWidth)
-	drawOptionsCursor ebiten.DrawImageOptions
-	drawOptionsRayHit ebiten.DrawImageOptions
+	imageWall          = ebiten.NewImage(1, 1)
+	imageCursor        = ebiten.NewImage(crosshairRadius*2, crosshairRadius*2)
+	imageRayHit        = ebiten.NewImage(rayHitImageWidth, rayHitImageWidth)
+	imageRayHitAttract = ebiten.NewImage(rayHitImageWidth, rayHitImageWidth)
+	imageRayHitRepel   = ebiten.NewImage(rayHitImageWidth, rayHitImageWidth)
+	drawOptionsCursor  ebiten.DrawImageOptions
+	drawOptionsRayHit  ebiten.DrawImageOptions
 )
 
 func init() {
@@ -61,7 +64,20 @@ func init() {
 	imageRayHit.DrawRectShader(rayHitImageWidth, rayHitImageWidth, shader, &ebiten.DrawRectShaderOptions{
 		Uniforms: map[string]interface{}{
 			"Radius": float32(rayHitImageWidth / 2.0),
-			"Color":  []float32{float32(colorRayHit.R / 0xf), float32(colorRayHit.G / 0xf), float32(colorRayHit.B / 0xf), float32(colorRayHit.A / 0xf)},
+			"Color":  []float32{float32(colorGun.R) / 255.0, float32(colorGun.G) / 255.0, float32(colorGun.B) / 255.0, float32(colorGun.A) / 255.0},
+		},
+	})
+
+	imageRayHitAttract.DrawRectShader(rayHitImageWidth, rayHitImageWidth, shader, &ebiten.DrawRectShaderOptions{
+		Uniforms: map[string]interface{}{
+			"Radius": float32(rayHitImageWidth / 2.0),
+			"Color":  []float32{float32(colorGunAttract.R) / 255.0, float32(colorGunAttract.G) / 255.0, float32(colorGunAttract.B) / 255.0, float32(colorGunAttract.A) / 255.0},
+		},
+	})
+	imageRayHitRepel.DrawRectShader(rayHitImageWidth, rayHitImageWidth, shader, &ebiten.DrawRectShaderOptions{
+		Uniforms: map[string]interface{}{
+			"Radius": float32(rayHitImageWidth / 2.0),
+			"Color":  []float32{float32(colorGunRepel.R) / 255.0, float32(colorGunRepel.G) / 255.0, float32(colorGunRepel.B) / 255.0, float32(colorGunRepel.A) / 255.0},
 		},
 	})
 }
@@ -136,6 +152,11 @@ func (g *game) Update() error {
 
 	// Update input states(mouse pos and pressed keys)
 	g.input.update()
+	if g.input.escape {
+		ebiten.SetCursorMode(ebiten.CursorModeHidden)
+	} else if (ebiten.CursorMode() == ebiten.CursorModeHidden) && g.input.attract {
+		ebiten.SetCursorMode(ebiten.CursorModeCaptured)
+	}
 
 	g.rayCast()
 
@@ -199,7 +220,15 @@ func (g *game) Draw(screen *ebiten.Image) {
 	const rayHitImageRadius = rayHitImageWidth / 2.0
 	drawOptionsRayHit.GeoM.Reset()
 	drawOptionsRayHit.GeoM.Translate(g.rayHitInfo.Point.X-rayHitImageRadius, g.rayHitInfo.Point.Y-rayHitImageRadius)
-	screen.DrawImage(imageRayHit, &drawOptionsRayHit)
+	var imageHit *ebiten.Image
+	if g.input.attract {
+		imageHit = imageRayHitAttract
+	} else if g.input.repel {
+		imageHit = imageRayHitRepel
+	} else {
+		imageHit = imageRayHit
+	}
+	screen.DrawImage(imageHit, &drawOptionsRayHit)
 
 	// Print fps
 	ebitenutil.DebugPrint(screen, fmt.Sprintf("TPS: %.2f  FPS: %.2f", ebiten.CurrentTPS(), ebiten.CurrentFPS()))
@@ -218,7 +247,7 @@ func main() {
 	ebiten.SetWindowTitle("Magrix")
 	// ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
 	ebiten.SetFPSMode(ebiten.FPSModeVsyncOffMaximum)
-	ebiten.SetCursorMode(ebiten.CursorModeHidden)
+	ebiten.SetCursorMode(ebiten.CursorModeCaptured)
 
 	if err := ebiten.RunGame(newGame()); err != nil {
 		log.Fatal(err)

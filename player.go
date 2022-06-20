@@ -37,16 +37,26 @@ const (
 	gunMinAlpha  = 1e-5 // required to prevent player pos to go NaN
 )
 
+type gunState uint8
+
+const (
+	gunStateIdle gunState = iota
+	gunStateAttract
+	gunStateRepel
+)
+
 var (
-	imagePlayer    = ebiten.NewImage(1, 1)
-	imageGun       = ebiten.NewImage(1, 1)
-	imageGunActive = ebiten.NewImage(1, 1)
+	imagePlayer     = ebiten.NewImage(1, 1)
+	imageGun        = ebiten.NewImage(1, 1)
+	imageGunAttract = ebiten.NewImage(1, 1)
+	imageGunRepel   = ebiten.NewImage(1, 1)
 )
 
 func init() {
 	imagePlayer.Fill(colorPlayer)
 	imageGun.Fill(colorGun)
-	imageGunActive.Fill(colorGunActive)
+	imageGunAttract.Fill(colorGunAttract)
+	imageGunRepel.Fill(colorGunRepel)
 }
 
 type player struct {
@@ -60,6 +70,7 @@ type player struct {
 	onGround       bool
 	gunRay         [2]cp.Vector
 	gunForce       cp.Vector
+	stateGun       gunState
 }
 
 func newPlayer(pos cp.Vector, space *cp.Space) *player {
@@ -148,11 +159,19 @@ func (p *player) handleInputs(input *input, rayHitInfo *cp.SegmentQueryInfo) {
 
 	// Apply magnetic force if fire is pressed
 	p.gunForce = cp.Vector{}
-	if input.fire && rayHitInfo.Alpha >= gunMinAlpha {
+	if (input.attract || input.repel) && rayHitInfo.Alpha >= gunMinAlpha {
 		forceDirection := rayHitInfo.Point.Sub(p.pos).Normalize()
 		p.gunForce = forceDirection.Mult(gunForceMult).Mult(1 / (rayHitInfo.Alpha * rayHitInfo.Alpha))
 		p.gunForce = p.gunForce.Clamp(gunForceMax)
+
+		p.stateGun = gunStateAttract
+		if input.repel {
+			p.gunForce = p.gunForce.Neg()
+			p.stateGun = gunStateRepel
+		}
 		p.body.SetForce(p.gunForce)
+	} else {
+		p.stateGun = gunStateIdle
 	}
 	// fmt.Printf("Player X: %.2f\tY:%.2f\tForce X: %.2f\tY:%.2f\n", p.pos.X, p.pos.Y, force.X, force.Y)
 }
@@ -176,8 +195,10 @@ func (p *player) draw(dst *ebiten.Image) {
 	dst.DrawImage(imagePlayer, &p.drawOptions)
 
 	// Draw prototype gun
-	if p.gunForce.LengthSq() > 0 {
-		dst.DrawImage(imageGunActive, &p.drawOptionsGun)
+	if p.stateGun == gunStateAttract {
+		dst.DrawImage(imageGunAttract, &p.drawOptionsGun)
+	} else if p.stateGun == gunStateRepel {
+		dst.DrawImage(imageGunRepel, &p.drawOptionsGun)
 	} else {
 		dst.DrawImage(imageGun, &p.drawOptionsGun)
 	}
