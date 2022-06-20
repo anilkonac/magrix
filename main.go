@@ -20,14 +20,9 @@ const (
 
 const (
 	ratioLandHeight      = 1.0 / 4.0
-	landY                = (1.0 - ratioLandHeight) * screenHeight
 	crosshairRadius      = 14
 	crosshairInnerRadius = 4
 	rayHitImageWidth     = 16
-	wallElasticity       = 1
-	wallFriction         = 1
-	wallWidth            = 30
-	wallRadius           = wallWidth / 2.0
 	// spaceIterations      = 10
 )
 
@@ -43,7 +38,6 @@ var (
 )
 
 var (
-	imageWall          = ebiten.NewImage(1, 1)
 	imageCursor        = ebiten.NewImage(crosshairRadius*2, crosshairRadius*2)
 	imageRayHit        = ebiten.NewImage(rayHitImageWidth, rayHitImageWidth)
 	imageRayHitAttract = ebiten.NewImage(rayHitImageWidth, rayHitImageWidth)
@@ -60,14 +54,13 @@ func init() {
 		panic(err)
 	}
 
-	// Prepare ray hit image (circle)
+	// Prepare ray hit images (circle)
 	imageRayHit.DrawRectShader(rayHitImageWidth, rayHitImageWidth, shader, &ebiten.DrawRectShaderOptions{
 		Uniforms: map[string]interface{}{
 			"Radius": float32(rayHitImageWidth / 2.0),
 			"Color":  []float32{float32(colorGun.R) / 255.0, float32(colorGun.G) / 255.0, float32(colorGun.B) / 255.0, float32(colorGun.A) / 255.0},
 		},
 	})
-
 	imageRayHitAttract.DrawRectShader(rayHitImageWidth, rayHitImageWidth, shader, &ebiten.DrawRectShaderOptions{
 		Uniforms: map[string]interface{}{
 			"Radius": float32(rayHitImageWidth / 2.0),
@@ -96,15 +89,14 @@ func initCursorImage() {
 // game implements ebiten.game interface.
 type game struct {
 	player     player
-	space      *cp.Space
+	enemy      enemy
 	walls      []*wall
+	space      *cp.Space
 	input      input
 	rayHitInfo cp.SegmentQueryInfo
-	enemy      enemy
 }
 
 func newGame() *game {
-
 	space := cp.NewSpace()
 	// space.Iterations = spaceIterations
 	space.SetGravity(cp.Vector{X: 0, Y: gravity})
@@ -152,6 +144,8 @@ func (g *game) Update() error {
 
 	// Update input states(mouse pos and pressed keys)
 	g.input.update()
+
+	// Escape from cursor captured mode
 	if g.input.escape {
 		ebiten.SetCursorMode(ebiten.CursorModeHidden)
 	} else if (ebiten.CursorMode() == ebiten.CursorModeHidden) && g.input.attract {
@@ -163,6 +157,7 @@ func (g *game) Update() error {
 	// Update player and player's gun
 	g.player.update(&g.input, &g.rayHitInfo)
 
+	// Sen negation of the player's gun force
 	var force cp.Vector
 	if g.rayHitInfo.Shape == g.enemy.shape {
 		force = g.player.gunForce.Neg()
@@ -171,9 +166,13 @@ func (g *game) Update() error {
 		g.enemy.update(nil)
 	}
 
-	// Update Crosshair geometry matrix
+	// Update geometry matrices
+	const rayHitImageRadius = rayHitImageWidth / 2.0
 	drawOptionsCursor.GeoM.Reset()
 	drawOptionsCursor.GeoM.Translate(g.input.cursorPos.X-crosshairRadius, g.input.cursorPos.Y-crosshairRadius)
+	drawOptionsRayHit.GeoM.Reset()
+	drawOptionsRayHit.GeoM.Translate(g.rayHitInfo.Point.X-rayHitImageRadius, g.rayHitInfo.Point.Y-rayHitImageRadius)
+
 	return nil
 }
 
@@ -217,9 +216,6 @@ func (g *game) Draw(screen *ebiten.Image) {
 	screen.DrawImage(imageCursor, &drawOptionsCursor)
 
 	// Draw rayhit
-	const rayHitImageRadius = rayHitImageWidth / 2.0
-	drawOptionsRayHit.GeoM.Reset()
-	drawOptionsRayHit.GeoM.Translate(g.rayHitInfo.Point.X-rayHitImageRadius, g.rayHitInfo.Point.Y-rayHitImageRadius)
 	var imageHit *ebiten.Image
 	if g.input.attract {
 		imageHit = imageRayHitAttract
@@ -246,7 +242,7 @@ func main() {
 	ebiten.SetWindowSize(screenWidth, screenHeight)
 	ebiten.SetWindowTitle("Magrix")
 	// ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
-	ebiten.SetFPSMode(ebiten.FPSModeVsyncOffMaximum)
+	// ebiten.SetFPSMode(ebiten.FPSModeVsyncOffMaximum)
 	ebiten.SetCursorMode(ebiten.CursorModeCaptured)
 
 	if err := ebiten.RunGame(newGame()); err != nil {

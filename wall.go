@@ -9,6 +9,17 @@ import (
 	"github.com/jakecoffman/cp"
 )
 
+const (
+	wallElasticity = 1
+	wallFriction   = 1
+	wallWidth      = 30
+	wallRadius     = wallWidth / 2.0
+)
+
+var (
+	imageWall = ebiten.NewImage(1, 1)
+)
+
 func init() {
 	imageWall.Fill(colorWall)
 }

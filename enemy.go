@@ -81,6 +81,7 @@ func (e *enemy) standUpBot() {
 	const standUpAngularVelocity = -35.0
 	const checkIntervalSec = 2.0
 	const checkEpsilon = 2.0
+
 	ticker := time.NewTicker(time.Second * checkIntervalSec)
 	for range ticker.C {
 		angleDegMod := math.Mod(e.body.Angle()*cp.DegreeConst, 180)
