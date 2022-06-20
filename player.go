@@ -46,23 +46,23 @@ var (
 func init() {
 	imagePlayer.Fill(colorPlayer)
 	imageGun.Fill(colorGun)
-	imageGunActive.Fill(colorCrosshair)
+	imageGunActive.Fill(colorGunActive)
 }
 
 type player struct {
-	pos               cp.Vector
-	posGun            cp.Vector
-	angleGun          float64
-	shape             *cp.Shape
-	body              *cp.Body
-	drawOptionsPlayer ebiten.DrawImageOptions
-	drawOptionsGun    ebiten.DrawImageOptions
-	onGround          bool
-	gunRay            [2]cp.Vector
-	gunActive         bool
+	pos            cp.Vector
+	posGun         cp.Vector
+	angleGun       float64
+	shape          *cp.Shape
+	body           *cp.Body
+	drawOptions    ebiten.DrawImageOptions
+	drawOptionsGun ebiten.DrawImageOptions
+	onGround       bool
+	gunRay         [2]cp.Vector
+	gunForce       cp.Vector
 }
 
-func newPlayer(pos cp.Vector) *player {
+func newPlayer(pos cp.Vector, space *cp.Space) *player {
 	player := &player{
 		pos: pos,
 	}
@@ -72,6 +72,9 @@ func newPlayer(pos cp.Vector) *player {
 	player.body.SetVelocityUpdateFunc(playerUpdateVelocity)
 	player.shape = cp.NewBox(player.body, playerWidth, playerHeight, 0)
 	player.shape.SetElasticity(playerElasticity)
+
+	space.AddBody(player.body)
+	space.AddShape(player.shape)
 
 	return player
 }
@@ -144,23 +147,21 @@ func (p *player) handleInputs(input *input, rayHitInfo *cp.SegmentQueryInfo) {
 	}
 
 	// Apply magnetic force if fire is pressed
-	var force cp.Vector
-	p.gunActive = false
+	p.gunForce = cp.Vector{}
 	if input.fire && rayHitInfo.Alpha >= gunMinAlpha {
 		forceDirection := rayHitInfo.Point.Sub(p.pos).Normalize()
-		force = forceDirection.Mult(gunForceMult).Mult(1 / (rayHitInfo.Alpha * rayHitInfo.Alpha))
-		force = force.Clamp(gunForceMax)
-		p.body.SetForce(force)
-		p.gunActive = true
+		p.gunForce = forceDirection.Mult(gunForceMult).Mult(1 / (rayHitInfo.Alpha * rayHitInfo.Alpha))
+		p.gunForce = p.gunForce.Clamp(gunForceMax)
+		p.body.SetForce(p.gunForce)
 	}
 	// fmt.Printf("Player X: %.2f\tY:%.2f\tForce X: %.2f\tY:%.2f\n", p.pos.X, p.pos.Y, force.X, force.Y)
 }
 
 func (p *player) updateGeometryMatrices() {
 	// Player
-	p.drawOptionsPlayer.GeoM.Reset()
-	p.drawOptionsPlayer.GeoM.Scale(playerWidth, playerHeight)
-	p.drawOptionsPlayer.GeoM.Translate(p.pos.X-playerWidth/2.0, p.pos.Y-playerHeight/2.0)
+	p.drawOptions.GeoM.Reset()
+	p.drawOptions.GeoM.Scale(playerWidth, playerHeight)
+	p.drawOptions.GeoM.Translate(p.pos.X-playerWidth/2.0, p.pos.Y-playerHeight/2.0)
 
 	// Gun
 	p.drawOptionsGun.GeoM.Reset()
@@ -172,10 +173,10 @@ func (p *player) updateGeometryMatrices() {
 
 func (p *player) draw(dst *ebiten.Image) {
 	// Draw prototype player
-	dst.DrawImage(imagePlayer, &p.drawOptionsPlayer)
+	dst.DrawImage(imagePlayer, &p.drawOptions)
 
 	// Draw prototype gun
-	if p.gunActive {
+	if p.gunForce.LengthSq() > 0 {
 		dst.DrawImage(imageGunActive, &p.drawOptionsGun)
 	} else {
 		dst.DrawImage(imageGun, &p.drawOptionsGun)

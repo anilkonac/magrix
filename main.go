@@ -35,8 +35,9 @@ var (
 	colorBackground = color.RGBA{124, 144, 160, 255} // ~ Light Slate Gray
 	colorWall       = color.RGBA{57, 62, 65, 255}    // ~ Onyx
 	colorGun        = color.RGBA{242, 129, 35, 255}  // ~ Princeton Orange
+	colorGunActive  = color.RGBA{216, 17, 89, 255}   // ~ Ruby
 	colorPlayer     = color.RGBA{155, 201, 149, 255} // ~ Dark Sea Green
-	colorCrosshair  = color.RGBA{216, 17, 89, 255}   // ~ Ruby
+	colorCrosshair  = color.RGBA{255, 251, 255, 255} // ~ Snow
 	colorRayHit     = color.RGBA{7, 160, 195, 255}   // ~ Blue Green
 )
 
@@ -56,6 +57,7 @@ func init() {
 		panic(err)
 	}
 
+	// Prepare ray hit image (circle)
 	imageRayHit.DrawRectShader(rayHitImageWidth, rayHitImageWidth, shader, &ebiten.DrawRectShaderOptions{
 		Uniforms: map[string]interface{}{
 			"Radius": float32(rayHitImageWidth / 2.0),
@@ -82,21 +84,20 @@ type game struct {
 	walls      []*wall
 	input      input
 	rayHitInfo cp.SegmentQueryInfo
+	enemy      enemy
 }
 
 func newGame() *game {
-	game := &game{
-		player: *newPlayer(cp.Vector{X: screenWidth / 2.0, Y: screenHeight / 2.0}),
-	}
 
 	space := cp.NewSpace()
 	// space.Iterations = spaceIterations
 	space.SetGravity(cp.Vector{X: 0, Y: gravity})
 
-	// Add player to the space
-	space.AddBody(game.player.body)
-	space.AddShape(game.player.shape)
-	game.space = space
+	game := &game{
+		player: *newPlayer(cp.Vector{X: screenWidth / 2.0, Y: screenHeight / 2.0}, space),
+		enemy:  *newEnemy(cp.Vector{X: 778, Y: 149}, space),
+		space:  space,
+	}
 
 	addWalls(space, &game.walls)
 
@@ -136,11 +137,32 @@ func (g *game) Update() error {
 	// Update input states(mouse pos and pressed keys)
 	g.input.update()
 
-	// Raycast
+	g.rayCast()
+
+	// Update player and player's gun
+	g.player.update(&g.input, &g.rayHitInfo)
+
+	var force cp.Vector
+	if g.rayHitInfo.Shape == g.enemy.shape {
+		force = g.player.gunForce.Neg()
+		g.enemy.update(&force)
+	} else {
+		g.enemy.update(nil)
+	}
+
+	// Update Crosshair geometry matrix
+	drawOptionsCursor.GeoM.Reset()
+	drawOptionsCursor.GeoM.Translate(g.input.cursorPos.X-crosshairRadius, g.input.cursorPos.Y-crosshairRadius)
+	return nil
+}
+
+func (g *game) rayCast() {
 	gunRay := g.player.gunRay
 	var info cp.SegmentQueryInfo
 	var success bool
 	g.rayHitInfo.Alpha = 1.5
+
+	// Check wall
 	for _, wall := range g.walls {
 		success = wall.shape.SegmentQuery(gunRay[0], gunRay[1], 0, &info)
 		if success && info.Alpha < g.rayHitInfo.Alpha {
@@ -148,13 +170,11 @@ func (g *game) Update() error {
 		}
 	}
 
-	// Update player and player's gun
-	g.player.update(&g.input, &g.rayHitInfo)
-
-	// Update Crosshair geometry matrix
-	drawOptionsCursor.GeoM.Reset()
-	drawOptionsCursor.GeoM.Translate(g.input.cursorPos.X-crosshairRadius, g.input.cursorPos.Y-crosshairRadius)
-	return nil
+	// Check enemy
+	success = g.enemy.shape.SegmentQuery(gunRay[0], gunRay[1], 0, &info)
+	if success && info.Alpha < g.rayHitInfo.Alpha {
+		g.rayHitInfo = info
+	}
 }
 
 // Draw is called every frame (typically 1/60[s] for 60Hz display).
@@ -169,6 +189,9 @@ func (g *game) Draw(screen *ebiten.Image) {
 	// Draw player and its gun
 	g.player.draw(screen)
 
+	// Draw enemy
+	g.enemy.draw(screen)
+
 	// Draw crosshair
 	screen.DrawImage(imageCursor, &drawOptionsCursor)
 
@@ -180,7 +203,7 @@ func (g *game) Draw(screen *ebiten.Image) {
 
 	// Print fps
 	ebitenutil.DebugPrint(screen, fmt.Sprintf("TPS: %.2f  FPS: %.2f", ebiten.CurrentTPS(), ebiten.CurrentFPS()))
-	// ebitenutil.DebugPrintAt(screen, fmt.Sprintf("X: %.0f, Y: %.0f", g.fCursorX, g.fCursorY), 0, 15)
+	// ebitenutil.DebugPrintAt(screen, fmt.Sprintf("X: %.0f, Y: %.0f", g.input.cursorPos.X, g.input.cursorPos.Y), 0, 15)
 }
 
 // Layout takes the outside size (e.g., the window size) and returns the (logical) screen size.
