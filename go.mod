@@ -5,9 +5,11 @@ go 1.18
 require (
 	github.com/hajimehoshi/ebiten/v2 v2.3.4
 	github.com/jakecoffman/cp v1.2.0
+	github.com/lafriks/go-tiled v0.7.0
 )
 
 require (
+	github.com/disintegration/imaging v1.6.2 // indirect
 	github.com/go-gl/glfw/v3.3/glfw v0.0.0-20220516021902-eb3e265c7661 // indirect
 	github.com/gofrs/flock v0.8.1 // indirect
 	github.com/jezek/xgb v1.0.1 // indirect

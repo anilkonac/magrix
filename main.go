@@ -10,6 +10,8 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/jakecoffman/cp"
+	"github.com/lafriks/go-tiled"
+	"github.com/lafriks/go-tiled/render"
 )
 
 const (
@@ -28,7 +30,7 @@ const (
 
 var (
 	colorBackground = color.RGBA{124, 144, 160, 255} // ~ Light Slate Gray
-	colorWall       = color.RGBA{57, 62, 65, 255}    // ~ Onyx
+	// colorWall       = color.RGBA{57, 62, 65, 255}    // ~ Onyx
 	colorGun        = color.RGBA{242, 129, 35, 255}  // ~ Princeton Orange
 	colorGunAttract = color.RGBA{216, 17, 89, 255}   // ~ Ruby
 	colorGunRepel   = color.RGBA{7, 160, 195, 255}   // ~ Blue Green
@@ -46,9 +48,49 @@ var (
 	drawOptionsRayHit  ebiten.DrawImageOptions
 )
 
+const mapPath = "assets/level1.tmx"
+
+var (
+	imageMap *ebiten.Image
+)
+
+func panicErr(err error) {
+	if err != nil {
+		panic(err)
+	}
+}
+
 func init() {
 	initCursorImage()
+	initRayHitImages()
 
+	// Parse map file
+	gameMap, err := tiled.LoadFile(mapPath)
+	panicErr(err)
+
+	renderer, err := render.NewRenderer(gameMap)
+	panicErr(err)
+
+	err = renderer.RenderVisibleLayers()
+	panicErr(err)
+
+	imageMap = ebiten.NewImageFromImage(renderer.Result)
+
+	renderer.Clear()
+}
+
+func initCursorImage() {
+	ebitenutil.DrawLine(imageCursor, 0, crosshairRadius,
+		crosshairRadius-crosshairInnerRadius, crosshairRadius, colorCrosshair)
+	ebitenutil.DrawLine(imageCursor, crosshairRadius, 0,
+		crosshairRadius, crosshairRadius-crosshairInnerRadius, colorCrosshair)
+	ebitenutil.DrawLine(imageCursor, crosshairRadius+crosshairInnerRadius,
+		crosshairRadius, 2*crosshairRadius, crosshairRadius, colorCrosshair)
+	ebitenutil.DrawLine(imageCursor, crosshairRadius, crosshairRadius+crosshairInnerRadius,
+		crosshairRadius, 2*crosshairRadius, colorCrosshair)
+}
+
+func initRayHitImages() {
 	shader, err := ebiten.NewShader(circle_go)
 	if err != nil {
 		panic(err)
@@ -73,17 +115,6 @@ func init() {
 			"Color":  []float32{float32(colorGunRepel.R) / 255.0, float32(colorGunRepel.G) / 255.0, float32(colorGunRepel.B) / 255.0, float32(colorGunRepel.A) / 255.0},
 		},
 	})
-}
-
-func initCursorImage() {
-	ebitenutil.DrawLine(imageCursor, 0, crosshairRadius,
-		crosshairRadius-crosshairInnerRadius, crosshairRadius, colorCrosshair)
-	ebitenutil.DrawLine(imageCursor, crosshairRadius, 0,
-		crosshairRadius, crosshairRadius-crosshairInnerRadius, colorCrosshair)
-	ebitenutil.DrawLine(imageCursor, crosshairRadius+crosshairInnerRadius,
-		crosshairRadius, 2*crosshairRadius, crosshairRadius, colorCrosshair)
-	ebitenutil.DrawLine(imageCursor, crosshairRadius, crosshairRadius+crosshairInnerRadius,
-		crosshairRadius, 2*crosshairRadius, colorCrosshair)
 }
 
 // game implements ebiten.game interface.
@@ -207,10 +238,12 @@ func (g *game) rayCast() {
 func (g *game) Draw(screen *ebiten.Image) {
 	screen.Fill(colorBackground)
 
-	// Draw walls
-	for _, wall := range g.walls {
-		wall.draw(screen)
-	}
+	// // Draw walls
+	// for _, wall := range g.walls {
+	// 	wall.draw(screen)
+	// }
+	// Draw map
+	screen.DrawImage(imageMap, &ebiten.DrawImageOptions{})
 
 	// Draw player and its gun
 	g.player.draw(screen)
@@ -243,7 +276,7 @@ func (g *game) Draw(screen *ebiten.Image) {
 // If you don't have to adjust the screen size with the outside size, just return a fixed size.
 func (g *game) Layout(outsideWidth, outsideHeight int) (int, int) {
 	// return outsideWidth, outsideHeight
-	return screenWidth, screenHeight
+	return 320, 240
 }
 
 func main() {

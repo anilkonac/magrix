@@ -1,3 +1,5 @@
+// Copyright 2022 Anıl Konaç
+
 package main
 
 import (

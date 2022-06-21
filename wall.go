@@ -16,13 +16,13 @@ const (
 	wallRadius     = wallWidth / 2.0
 )
 
-var (
-	imageWall = ebiten.NewImage(1, 1)
-)
+// var (
+// 	imageWall = ebiten.NewImage(1, 1)
+// )
 
-func init() {
-	imageWall.Fill(colorWall)
-}
+// func init() {
+// 	imageWall.Fill(colorWall)
+// }
 
 type wall struct {
 	shape       *cp.Shape
@@ -49,5 +49,5 @@ func newWall(x1, y1, x2, y2, radius float64, space *cp.Space) *wall {
 }
 
 func (w *wall) draw(screen *ebiten.Image) {
-	screen.DrawImage(imageWall, &w.drawOptions)
+	// screen.DrawImage(imageWall, &w.drawOptions)
 }
