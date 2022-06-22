@@ -10,10 +10,10 @@ import (
 )
 
 const (
-	playerWidth  = 40.0
-	playerHeight = 100.0
-	gunWidth     = playerHeight / 2.0
-	gunHeight    = playerWidth / 3.0
+	playerWidthTile  = 1
+	playerHeightTile = 2
+	gunWidthTile     = 1
+	gunHeightTile    = 1.0 / 3.0
 )
 
 const (
@@ -32,7 +32,7 @@ const (
 )
 
 const (
-	gunRange     = screenWidth + screenHeight
+	gunRange     = cameraWidth + cameraHeight
 	gunForceMult = 45
 	gunForceMax  = 1500
 	gunMinAlpha  = 1e-5 // required to prevent player pos to go NaN
@@ -63,6 +63,8 @@ func init() {
 type player struct {
 	pos            cp.Vector
 	posGun         cp.Vector
+	size           cp.Vector
+	sizeGun        cp.Vector
 	angleGun       float64
 	shape          *cp.Shape
 	body           *cp.Body
@@ -77,12 +79,20 @@ type player struct {
 func newPlayer(pos cp.Vector, space *cp.Space) *player {
 	player := &player{
 		pos: pos,
+		size: cp.Vector{
+			X: playerWidthTile * tileLength,
+			Y: playerHeightTile * tileLength,
+		},
+		sizeGun: cp.Vector{
+			X: gunWidthTile * tileLength,
+			Y: gunHeightTile * tileLength,
+		},
 	}
 
 	player.body = cp.NewBody(playerMass, cp.INFINITY)
 	player.body.SetPosition(cp.Vector{X: pos.X, Y: pos.Y})
 	player.body.SetVelocityUpdateFunc(playerUpdateVelocity)
-	player.shape = cp.NewBox(player.body, playerWidth, playerHeight, 0)
+	player.shape = cp.NewBox(player.body, playerWidthTile*tileLength, playerHeightTile*tileLength, 0)
 	player.shape.SetElasticity(playerElasticity)
 
 	space.AddBody(player.body)
@@ -180,13 +190,13 @@ func (p *player) handleInputs(input *input, rayHitInfo *cp.SegmentQueryInfo) {
 func (p *player) updateGeometryMatrices() {
 	// Player
 	p.drawOptions.GeoM.Reset()
-	p.drawOptions.GeoM.Scale(playerWidth, playerHeight)
-	p.drawOptions.GeoM.Translate(p.pos.X-playerWidth/2.0, p.pos.Y-playerHeight/2.0)
+	p.drawOptions.GeoM.Scale(p.size.X, p.size.Y)
+	p.drawOptions.GeoM.Translate(p.pos.X-p.size.X/2.0, p.pos.Y-p.size.Y/2.0)
 
 	// Gun
 	p.drawOptionsGun.GeoM.Reset()
-	p.drawOptionsGun.GeoM.Scale(gunWidth, gunHeight)
-	p.drawOptionsGun.GeoM.Translate(0, -gunHeight/2.0)
+	p.drawOptionsGun.GeoM.Scale(p.sizeGun.X, p.sizeGun.Y)
+	p.drawOptionsGun.GeoM.Translate(0, -p.sizeGun.Y/2.0)
 	p.drawOptionsGun.GeoM.Rotate(p.angleGun)
 	p.drawOptionsGun.GeoM.Translate(p.posGun.X, p.posGun.Y)
 }

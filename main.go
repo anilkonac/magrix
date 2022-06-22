@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"image/color"
 	"log"
+	"math"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
@@ -15,22 +16,24 @@ import (
 )
 
 const (
+	cameraWidth  = 320
+	cameraHeight = 240
 	screenWidth  = 960
 	screenHeight = 720
 	deltaTime    = 1.0 / 60.0
 )
 
 const (
-	ratioLandHeight      = 1.0 / 4.0
-	crosshairRadius      = 14
-	crosshairInnerRadius = 4
-	rayHitImageWidth     = 16
+	crosshairRadius      = 6
+	crosshairInnerRadius = 2
+	rayHitImageWidth     = 4
+	wallElasticity       = 1
+	wallFriction         = 1
 	// spaceIterations      = 10
 )
 
 var (
-	colorBackground = color.RGBA{124, 144, 160, 255} // ~ Light Slate Gray
-	// colorWall       = color.RGBA{57, 62, 65, 255}    // ~ Onyx
+	colorBackground = color.RGBA{38, 38, 38, 255}
 	colorGun        = color.RGBA{242, 129, 35, 255}  // ~ Princeton Orange
 	colorGunAttract = color.RGBA{216, 17, 89, 255}   // ~ Ruby
 	colorGunRepel   = color.RGBA{7, 160, 195, 255}   // ~ Blue Green
@@ -46,6 +49,7 @@ var (
 	imageRayHitRepel   = ebiten.NewImage(rayHitImageWidth, rayHitImageWidth)
 	drawOptionsCursor  ebiten.DrawImageOptions
 	drawOptionsRayHit  ebiten.DrawImageOptions
+	tileLength         float64
 )
 
 const mapPath = "assets/level1.tmx"
@@ -63,20 +67,6 @@ func panicErr(err error) {
 func init() {
 	initCursorImage()
 	initRayHitImages()
-
-	// Parse map file
-	gameMap, err := tiled.LoadFile(mapPath)
-	panicErr(err)
-
-	renderer, err := render.NewRenderer(gameMap)
-	panicErr(err)
-
-	err = renderer.RenderVisibleLayers()
-	panicErr(err)
-
-	imageMap = ebiten.NewImageFromImage(renderer.Result)
-
-	renderer.Clear()
 }
 
 func initCursorImage() {
@@ -121,7 +111,7 @@ func initRayHitImages() {
 type game struct {
 	player     player
 	enemies    []*enemy
-	walls      []*wall
+	walls      []*cp.Shape
 	space      *cp.Space
 	input      input
 	rayHitInfo cp.SegmentQueryInfo
@@ -132,42 +122,45 @@ func newGame() *game {
 	// space.Iterations = spaceIterations
 	space.SetGravity(cp.Vector{X: 0, Y: gravity})
 
+	// game.enemies = append(game.enemies, newEnemy(cp.Vector{X: 778, Y: 200}, space))
+	// game.enemies = append(game.enemies, newEnemy(cp.Vector{X: 100, Y: 200}, space))
+
+	// Parse map file
+	gameMap, err := tiled.LoadFile(mapPath)
+	panicErr(err)
+	tileLength = float64(gameMap.TileWidth)
+
 	game := &game{
-		player: *newPlayer(cp.Vector{X: screenWidth / 2.0, Y: screenHeight / 2.0}, space),
+		player: *newPlayer(cp.Vector{X: cameraWidth / 2.0, Y: cameraHeight / 2.0}, space),
 		space:  space,
 	}
 
-	game.enemies = append(game.enemies, newEnemy(cp.Vector{X: 778, Y: 200}, space))
-	game.enemies = append(game.enemies, newEnemy(cp.Vector{X: 100, Y: 200}, space))
-	addWalls(space, &game.walls)
+	game.addWalls(gameMap.ObjectGroups[0].Objects)
+
+	renderer, err := render.NewRenderer(gameMap)
+	panicErr(err)
+
+	err = renderer.RenderVisibleLayers()
+	panicErr(err)
+
+	imageMap = ebiten.NewImageFromImage(renderer.Result)
+
+	renderer.Clear()
 
 	return game
 }
 
-func addWalls(space *cp.Space, walls *[]*wall) {
-	const (
-		wallLeftCenterX        = 3 * wallRadius
-		wallLeftCenterY        = screenHeight - 2.0*screenHeight/5.0
-		wallLeftCenterWidth    = screenWidth / 4.0
-		wallRightCenterX       = screenWidth - screenWidth/4.0 - wallWidth
-		wallRightCenterY       = 2.0 * screenHeight / 5.0
-		wallRightCenterWidth   = screenWidth / 4.0
-		wallTopCenterX         = screenWidth/4.0 + wallWidth
-		wallTopCenterY         = 3 * wallRadius
-		wallTopCenterHeight    = screenHeight / 4.0
-		wallBottomCenterX      = wallRightCenterX
-		wallBottomCenterHeight = screenHeight / 4.0
-		wallBottomCenterY      = screenHeight - wallWidth - wallBottomCenterHeight
-	)
+func (g *game) addWalls(wallObjects []*tiled.Object) {
+	for _, obj := range wallObjects {
+		radius := math.Min(obj.Width, obj.Height) / 2.0
+		x2 := obj.X + obj.Width - radius
+		y2 := obj.Y + obj.Height - radius
+		shape := g.space.AddShape(cp.NewSegment(g.space.StaticBody, cp.Vector{X: obj.X + radius, Y: obj.Y + radius}, cp.Vector{X: x2, Y: y2}, radius))
+		shape.SetElasticity(wallElasticity)
+		shape.SetFriction(wallFriction)
 
-	*walls = append(*walls, newWall(wallRadius, wallRadius, screenWidth-wallRadius, wallRadius, wallRadius, space))                                                   // Top wall
-	*walls = append(*walls, newWall(wallRadius, screenHeight-wallRadius, screenWidth-wallRadius, screenHeight-wallRadius, wallRadius, space))                         // Bottom wall
-	*walls = append(*walls, newWall(wallRadius, 0, wallRadius, screenHeight-wallRadius, wallRadius, space))                                                           // left wall
-	*walls = append(*walls, newWall(screenWidth-wallRadius, 0, screenWidth-wallRadius, screenHeight-wallRadius, wallRadius, space))                                   // right wall
-	*walls = append(*walls, newWall(wallLeftCenterX, wallLeftCenterY, wallLeftCenterX+wallLeftCenterWidth-wallRadius, wallLeftCenterY, wallRadius, space))            // left center wall
-	*walls = append(*walls, newWall(wallRightCenterX, wallRightCenterY, wallRightCenterX+wallRightCenterWidth-wallRadius, wallRightCenterY, wallRadius, space))       // right center wall
-	*walls = append(*walls, newWall(wallTopCenterX, wallTopCenterY, wallTopCenterX, wallTopCenterY+wallTopCenterHeight-wallRadius, wallRadius, space))                // top center wall
-	*walls = append(*walls, newWall(wallBottomCenterX, wallBottomCenterY, wallBottomCenterX, wallBottomCenterY+wallBottomCenterHeight-wallRadius, wallRadius, space)) // bottom center wall
+		g.walls = append(g.walls, shape)
+	}
 }
 
 // Update is called every tick (1/60 [s] by default).
@@ -216,9 +209,9 @@ func (g *game) rayCast() {
 	var success bool
 	g.rayHitInfo.Alpha = 1.5
 
-	// Check wall
-	for _, wall := range g.walls {
-		success = wall.shape.SegmentQuery(gunRay[0], gunRay[1], 0, &info)
+	// Check walls
+	for _, shape := range g.walls {
+		success = shape.SegmentQuery(gunRay[0], gunRay[1], 0, &info)
 		if success && info.Alpha < g.rayHitInfo.Alpha {
 			g.rayHitInfo = info
 		}
@@ -276,7 +269,7 @@ func (g *game) Draw(screen *ebiten.Image) {
 // If you don't have to adjust the screen size with the outside size, just return a fixed size.
 func (g *game) Layout(outsideWidth, outsideHeight int) (int, int) {
 	// return outsideWidth, outsideHeight
-	return 320, 240
+	return cameraWidth, cameraHeight
 }
 
 func main() {
