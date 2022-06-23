@@ -12,7 +12,7 @@ import (
 
 const (
 	enemyMass       = 0.75
-	enemyFriction   = 0.5
+	enemyFriction   = 0.75
 	enemyMoment     = 50
 	enemyWidthTile  = 1
 	enemyHeightTile = 2
@@ -46,6 +46,7 @@ func newEnemy(pos cp.Vector, space *cp.Space) *enemy {
 	body.SetPosition(cp.Vector{X: pos.X, Y: pos.Y})
 	body.SetVelocityUpdateFunc(enemyUpdateVelocity)
 	enemy.body = body
+
 	enemy.shape = cp.NewBox(enemy.body, enemy.size.X, enemy.size.Y, 0)
 	enemy.shape.SetElasticity(playerElasticity)
 	enemy.shape.SetFriction(enemyFriction)
@@ -97,8 +98,6 @@ func (e *enemy) standUpBot() {
 		}
 		angleDeg := e.body.Angle() * cp.DegreeConst
 		angleDegMod := math.Mod(angleDeg, 180)
-		// isNegative := math.Signbit(angleDeg)
-		// fmt.Printf("angleDeg: %.2f\tisNegative: %v\n", angleDeg, isNegative)
 
 		if math.Abs(angleDegMod-90) < checkEpsilon {
 			e.body.SetAngularVelocity(standUpAngularVelocity)

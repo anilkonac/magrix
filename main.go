@@ -183,7 +183,6 @@ func (g *game) addWalls(wallObjects []*tiled.Object) {
 
 // Update is called every tick (1/60 [s] by default).
 func (g *game) Update() error {
-	// Update input states(mouse pos and pressed keys)
 	g.input.update()
 	drawOptionsCursor.GeoM.Reset()
 	drawOptionsCursor.GeoM.Translate(g.input.cursorPos.X-crosshairRadius, g.input.cursorPos.Y-crosshairRadius)

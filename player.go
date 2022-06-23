@@ -18,10 +18,10 @@ const (
 
 const (
 	gravity          = 750.0
-	playerMass       = 0.5
+	playerMass       = 0.75
 	playerElasticity = 0.0
 	// Taken from cp-examples/player and modified
-	playerFriction        = playerGroundAccel / (2 * gravity)
+	playerFriction        = playerGroundAccel / (4 * gravity)
 	playerVelocity        = 150.0
 	playerGroundAccelTime = 0.05
 	playerGroundAccel     = playerVelocity / playerGroundAccelTime
@@ -31,8 +31,8 @@ const (
 
 const (
 	gunRange     = cameraWidth + cameraHeight
-	gunForceMult = 12
-	gunForceMax  = 600
+	gunForceMult = 15
+	gunForceMax  = 750
 	gunMinAlpha  = 1e-5 // required to prevent player pos to go NaN
 )
 
