@@ -52,7 +52,7 @@ var (
 	tileLength         float64
 )
 
-const mapPath = "assets/level1.tmx"
+const mapPath = "assets/testLevel.tmx"
 
 var (
 	imagePlatforms   *ebiten.Image
@@ -124,9 +124,6 @@ func newGame() *game {
 	// space.Iterations = spaceIterations
 	space.SetGravity(cp.Vector{X: 0, Y: gravity})
 
-	// game.enemies = append(game.enemies, newEnemy(cp.Vector{X: 778, Y: 200}, space))
-	// game.enemies = append(game.enemies, newEnemy(cp.Vector{X: 100, Y: 200}, space))
-
 	// Parse map file
 	gameMap, err := tiled.LoadFile(mapPath)
 	panicErr(err)
@@ -135,6 +132,12 @@ func newGame() *game {
 	game := &game{
 		player: *newPlayer(cp.Vector{X: cameraWidth / 2.0, Y: cameraHeight / 2.0}, space),
 		space:  space,
+	}
+
+	// Add enemies
+	for _, enemyPos := range gameMap.ObjectGroups[1].Objects {
+		game.enemies = append(game.enemies, newEnemy(cp.Vector{X: enemyPos.X, Y: enemyPos.Y}, space))
+
 	}
 
 	game.addWalls(gameMap.ObjectGroups[0].Objects)
@@ -191,7 +194,7 @@ func (g *game) Update() error {
 	// Update player and player's gun
 	g.player.update(&g.input, &g.rayHitInfo)
 
-	// Sen negation of the player's gun force
+	// Send negation of the player's gun force to the enemy
 	var force cp.Vector
 	for _, enemy := range g.enemies {
 		if g.rayHitInfo.Shape == enemy.shape {
@@ -247,13 +250,13 @@ func (g *game) Draw(screen *ebiten.Image) {
 	// Draw player and its gun
 	g.player.draw(screen)
 
-	// Draw walls and platforms
-	screen.DrawImage(imagePlatforms, &ebiten.DrawImageOptions{})
-
 	// Draw enemy
 	for _, enemy := range g.enemies {
 		enemy.draw(screen)
 	}
+
+	// Draw walls and platforms
+	screen.DrawImage(imagePlatforms, &ebiten.DrawImageOptions{})
 
 	// Draw crosshair
 	screen.DrawImage(imageCursor, &drawOptionsCursor)

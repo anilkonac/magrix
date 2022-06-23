@@ -69,10 +69,10 @@
   <object id="29" name="bottom center wall" x="227" y="144" width="2" height="80"/>
  </objectgroup>
  <objectgroup id="7" name="Enemies">
-  <object id="30" name="Enemy 2" x="44" y="116">
+  <object id="30" name="Enemy 2" x="44" y="119.696">
    <point/>
   </object>
-  <object id="31" name="Enemy 1" x="241" y="64.5">
+  <object id="31" name="Enemy 1" x="248.919" y="56.0525">
    <point/>
   </object>
  </objectgroup>

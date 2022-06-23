@@ -53,7 +53,7 @@ func newEnemy(pos cp.Vector, space *cp.Space) *enemy {
 	space.AddBody(enemy.body)
 	space.AddShape(enemy.shape)
 
-	go enemy.standUpBot()
+	// go enemy.standUpBot() // TODO: Tweak parameters in de standUpBot() function
 
 	return enemy
 }
