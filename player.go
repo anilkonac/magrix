@@ -10,31 +10,29 @@ import (
 )
 
 const (
-	playerWidth  = 40.0
-	playerHeight = 100.0
-	gunWidth     = playerHeight / 2.0
-	gunHeight    = playerWidth / 3.0
+	playerWidthTile  = 1
+	playerHeightTile = 2
+	gunWidthTile     = 1
+	gunHeightTile    = 1.0 / 3.0
 )
 
 const (
-	gravity          = 1000.0
-	playerMass       = 1
+	gravity          = 750.0
+	playerMass       = 0.75
 	playerElasticity = 0.0
 	// Taken from cp-examples/player and modified
-	playerFriction        = playerGroundAccel / (2 * gravity)
-	playerVelocity        = 400.0
-	playerGroundAccelTime = 0.1
+	playerFriction        = playerGroundAccel / (4 * gravity)
+	playerVelocity        = 150.0
+	playerGroundAccelTime = 0.05
 	playerGroundAccel     = playerVelocity / playerGroundAccelTime
-	playerAirAccelTime    = 0.5
-	playerAirAccel        = playerVelocity / playerAirAccelTime
-	jumpHeight            = 60.0
+	jumpHeightTile        = 1.5
 	//
 )
 
 const (
-	gunRange     = screenWidth + screenHeight
-	gunForceMult = 45
-	gunForceMax  = 1500
+	gunRange     = cameraWidth + cameraHeight
+	gunForceMult = 15
+	gunForceMax  = 750
 	gunMinAlpha  = 1e-5 // required to prevent player pos to go NaN
 )
 
@@ -63,6 +61,8 @@ func init() {
 type player struct {
 	pos            cp.Vector
 	posGun         cp.Vector
+	size           cp.Vector
+	sizeGun        cp.Vector
 	angleGun       float64
 	shape          *cp.Shape
 	body           *cp.Body
@@ -77,12 +77,20 @@ type player struct {
 func newPlayer(pos cp.Vector, space *cp.Space) *player {
 	player := &player{
 		pos: pos,
+		size: cp.Vector{
+			X: playerWidthTile * tileLength,
+			Y: playerHeightTile * tileLength,
+		},
+		sizeGun: cp.Vector{
+			X: gunWidthTile * tileLength,
+			Y: gunHeightTile * tileLength,
+		},
 	}
 
 	player.body = cp.NewBody(playerMass, cp.INFINITY)
 	player.body.SetPosition(cp.Vector{X: pos.X, Y: pos.Y})
 	player.body.SetVelocityUpdateFunc(playerUpdateVelocity)
-	player.shape = cp.NewBox(player.body, playerWidth, playerHeight, 0)
+	player.shape = cp.NewBox(player.body, playerWidthTile*tileLength, playerHeightTile*tileLength, 0)
 	player.shape.SetElasticity(playerElasticity)
 
 	space.AddBody(player.body)
@@ -120,7 +128,8 @@ func (p *player) update(input *input, rayHitInfo *cp.SegmentQueryInfo) {
 }
 
 func (p *player) checkOnGround() {
-	// Grab the grounding normal from last frame - Taken from cp-examples/player
+	const groundNormalYThreshold = 0.5
+	// Grab the grounding normal from last frame - Taken from cp-examples/player and modified
 	groundNormal := cp.Vector{}
 	p.body.EachArbiter(func(arb *cp.Arbiter) {
 		n := arb.Normal() //.Neg()
@@ -129,7 +138,7 @@ func (p *player) checkOnGround() {
 			groundNormal = n
 		}
 	})
-	p.onGround = groundNormal.Y > 0
+	p.onGround = groundNormal.Y > groundNormalYThreshold
 }
 
 func (p *player) handleInputs(input *input, rayHitInfo *cp.SegmentQueryInfo) {
@@ -148,7 +157,7 @@ func (p *player) handleInputs(input *input, rayHitInfo *cp.SegmentQueryInfo) {
 	}
 
 	if input.up && p.onGround {
-		jumpV := math.Sqrt(2.0 * jumpHeight * gravity) // Taken from cp-examples/player
+		jumpV := math.Sqrt(2.0 * jumpHeightTile * tileLength * gravity) // Taken from cp-examples/player
 		p.body.SetVelocityVector(p.body.Velocity().Add(cp.Vector{X: 0, Y: -jumpV}))
 	}
 	// Apply air control if not on ground
@@ -174,19 +183,21 @@ func (p *player) handleInputs(input *input, rayHitInfo *cp.SegmentQueryInfo) {
 	} else {
 		p.stateGun = gunStateIdle
 	}
-	// fmt.Printf("Player X: %.2f\tY:%.2f\tForce X: %.2f\tY:%.2f\n", p.pos.X, p.pos.Y, force.X, force.Y)
+
+	// v := p.body.Velocity()
+	// fmt.Printf("Velocity X: %.2f\tY: %.2f\t\tForce X: %.2f\tY:%.2f\n", v.X, v.Y, p.gunForce.X, p.gunForce.Y)
 }
 
 func (p *player) updateGeometryMatrices() {
 	// Player
 	p.drawOptions.GeoM.Reset()
-	p.drawOptions.GeoM.Scale(playerWidth, playerHeight)
-	p.drawOptions.GeoM.Translate(p.pos.X-playerWidth/2.0, p.pos.Y-playerHeight/2.0)
+	p.drawOptions.GeoM.Scale(p.size.X, p.size.Y)
+	p.drawOptions.GeoM.Translate(p.pos.X-p.size.X/2.0, p.pos.Y-p.size.Y/2.0)
 
 	// Gun
 	p.drawOptionsGun.GeoM.Reset()
-	p.drawOptionsGun.GeoM.Scale(gunWidth, gunHeight)
-	p.drawOptionsGun.GeoM.Translate(0, -gunHeight/2.0)
+	p.drawOptionsGun.GeoM.Scale(p.sizeGun.X, p.sizeGun.Y)
+	p.drawOptionsGun.GeoM.Translate(0, -p.sizeGun.Y/2.0)
 	p.drawOptionsGun.GeoM.Rotate(p.angleGun)
 	p.drawOptionsGun.GeoM.Translate(p.posGun.X, p.posGun.Y)
 }

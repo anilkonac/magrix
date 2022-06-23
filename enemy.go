@@ -1,3 +1,5 @@
+// Copyright 2022 Anıl Konaç
+
 package main
 
 import (
@@ -9,11 +11,11 @@ import (
 )
 
 const (
-	enemyMass     = 2.0
-	enemyFriction = 0.75
-	enemyWidth    = playerWidth
-	enemyHeight   = playerHeight
-	enemyMoment   = 75
+	enemyMass       = 0.75
+	enemyFriction   = 0.75
+	enemyMoment     = 50
+	enemyWidthTile  = 1
+	enemyHeightTile = 2
 )
 
 var (
@@ -26,6 +28,7 @@ func init() {
 
 type enemy struct {
 	pos         cp.Vector
+	size        cp.Vector
 	drawOptions ebiten.DrawImageOptions
 	body        *cp.Body
 	shape       *cp.Shape
@@ -34,13 +37,17 @@ type enemy struct {
 func newEnemy(pos cp.Vector, space *cp.Space) *enemy {
 	enemy := &enemy{
 		pos: pos,
+		size: cp.Vector{
+			X: enemyWidthTile * tileLength,
+			Y: enemyHeightTile * tileLength},
 	}
 
 	body := cp.NewBody(enemyMass, enemyMoment)
 	body.SetPosition(cp.Vector{X: pos.X, Y: pos.Y})
 	body.SetVelocityUpdateFunc(enemyUpdateVelocity)
 	enemy.body = body
-	enemy.shape = cp.NewBox(enemy.body, enemyWidth, enemyHeight, 0)
+
+	enemy.shape = cp.NewBox(enemy.body, enemy.size.X, enemy.size.Y, 0)
 	enemy.shape.SetElasticity(playerElasticity)
 	enemy.shape.SetFriction(enemyFriction)
 
@@ -61,8 +68,8 @@ func (e *enemy) update(force *cp.Vector) {
 
 	angle := e.body.Angle()
 	e.drawOptions.GeoM.Reset()
-	e.drawOptions.GeoM.Scale(enemyWidth, enemyHeight)
-	e.drawOptions.GeoM.Translate(-enemyWidth/2.0, -enemyHeight/2.0)
+	e.drawOptions.GeoM.Scale(e.size.X, e.size.Y)
+	e.drawOptions.GeoM.Translate(-e.size.X/2.0, -e.size.Y/2.0)
 	e.drawOptions.GeoM.Rotate(angle)
 	e.drawOptions.GeoM.Translate(e.pos.X, e.pos.Y)
 }
@@ -77,21 +84,27 @@ func enemyUpdateVelocity(body *cp.Body, gravity cp.Vector, damping, dt float64) 
 
 // Goroutine
 func (e *enemy) standUpBot() {
-	const standUpForceY = -30000
-	const standUpAngularVelocity = -35.0
+	const standUpForceY = -8000
+	const standUpAngularVelocity = -4
 	const checkIntervalSec = 3.0
 	const checkEpsilon = 1.0
 
+	vForce := cp.Vector{X: 0, Y: standUpForceY}
+
 	ticker := time.NewTicker(time.Second * checkIntervalSec)
 	for range ticker.C {
-		angleDegMod := math.Mod(e.body.Angle()*cp.DegreeConst, 180)
+		if gamePaused {
+			continue
+		}
+		angleDeg := e.body.Angle() * cp.DegreeConst
+		angleDegMod := math.Mod(angleDeg, 180)
 
 		if math.Abs(angleDegMod-90) < checkEpsilon {
-			e.body.SetAngularVelocity(-standUpAngularVelocity)
-			e.body.SetForce(cp.Vector{X: 0, Y: standUpForceY})
-		} else if math.Abs(angleDegMod+90) < checkEpsilon {
 			e.body.SetAngularVelocity(standUpAngularVelocity)
-			e.body.SetForce(cp.Vector{X: 0, Y: standUpForceY})
+			e.body.SetForce(vForce)
+		} else if math.Abs(angleDegMod+90) < checkEpsilon {
+			e.body.SetAngularVelocity(-standUpAngularVelocity)
+			e.body.SetForce(vForce)
 		}
 	}
 }

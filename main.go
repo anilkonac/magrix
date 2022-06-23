@@ -6,29 +6,34 @@ import (
 	"fmt"
 	"image/color"
 	"log"
+	"math"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/jakecoffman/cp"
+	"github.com/lafriks/go-tiled"
+	"github.com/lafriks/go-tiled/render"
 )
 
 const (
+	cameraWidth  = 320
+	cameraHeight = 240
 	screenWidth  = 960
 	screenHeight = 720
 	deltaTime    = 1.0 / 60.0
 )
 
 const (
-	ratioLandHeight      = 1.0 / 4.0
-	crosshairRadius      = 14
-	crosshairInnerRadius = 4
-	rayHitImageWidth     = 16
+	crosshairRadius      = 6
+	crosshairInnerRadius = 2
+	rayHitImageWidth     = 4
+	wallElasticity       = 0
+	wallFriction         = 1
 	// spaceIterations      = 10
 )
 
 var (
-	colorBackground = color.RGBA{124, 144, 160, 255} // ~ Light Slate Gray
-	colorWall       = color.RGBA{57, 62, 65, 255}    // ~ Onyx
+	colorBackground = color.RGBA{38, 38, 38, 255}
 	colorGun        = color.RGBA{242, 129, 35, 255}  // ~ Princeton Orange
 	colorGunAttract = color.RGBA{216, 17, 89, 255}   // ~ Ruby
 	colorGunRepel   = color.RGBA{7, 160, 195, 255}   // ~ Blue Green
@@ -44,11 +49,42 @@ var (
 	imageRayHitRepel   = ebiten.NewImage(rayHitImageWidth, rayHitImageWidth)
 	drawOptionsCursor  ebiten.DrawImageOptions
 	drawOptionsRayHit  ebiten.DrawImageOptions
+	tileLength         float64
 )
+
+const mapPath = "assets/testLevel.tmx"
+
+var (
+	imagePlatforms   *ebiten.Image
+	imageComputers   *ebiten.Image
+	imageDecorations *ebiten.Image
+)
+
+var gamePaused bool
+
+func panicErr(err error) {
+	if err != nil {
+		panic(err)
+	}
+}
 
 func init() {
 	initCursorImage()
+	initRayHitImages()
+}
 
+func initCursorImage() {
+	ebitenutil.DrawLine(imageCursor, 0, crosshairRadius,
+		crosshairRadius-crosshairInnerRadius, crosshairRadius, colorCrosshair)
+	ebitenutil.DrawLine(imageCursor, crosshairRadius, 0,
+		crosshairRadius, crosshairRadius-crosshairInnerRadius, colorCrosshair)
+	ebitenutil.DrawLine(imageCursor, crosshairRadius+crosshairInnerRadius,
+		crosshairRadius, 2*crosshairRadius, crosshairRadius, colorCrosshair)
+	ebitenutil.DrawLine(imageCursor, crosshairRadius, crosshairRadius+crosshairInnerRadius,
+		crosshairRadius, 2*crosshairRadius, colorCrosshair)
+}
+
+func initRayHitImages() {
 	shader, err := ebiten.NewShader(circle_go)
 	if err != nil {
 		panic(err)
@@ -75,22 +111,11 @@ func init() {
 	})
 }
 
-func initCursorImage() {
-	ebitenutil.DrawLine(imageCursor, 0, crosshairRadius,
-		crosshairRadius-crosshairInnerRadius, crosshairRadius, colorCrosshair)
-	ebitenutil.DrawLine(imageCursor, crosshairRadius, 0,
-		crosshairRadius, crosshairRadius-crosshairInnerRadius, colorCrosshair)
-	ebitenutil.DrawLine(imageCursor, crosshairRadius+crosshairInnerRadius,
-		crosshairRadius, 2*crosshairRadius, crosshairRadius, colorCrosshair)
-	ebitenutil.DrawLine(imageCursor, crosshairRadius, crosshairRadius+crosshairInnerRadius,
-		crosshairRadius, 2*crosshairRadius, colorCrosshair)
-}
-
 // game implements ebiten.game interface.
 type game struct {
 	player     player
 	enemies    []*enemy
-	walls      []*wall
+	walls      []*cp.Shape
 	space      *cp.Space
 	input      input
 	rayHitInfo cp.SegmentQueryInfo
@@ -101,64 +126,81 @@ func newGame() *game {
 	// space.Iterations = spaceIterations
 	space.SetGravity(cp.Vector{X: 0, Y: gravity})
 
+	// Parse map file
+	gameMap, err := tiled.LoadFile(mapPath)
+	panicErr(err)
+	tileLength = float64(gameMap.TileWidth)
+
 	game := &game{
-		player: *newPlayer(cp.Vector{X: screenWidth / 2.0, Y: screenHeight / 2.0}, space),
+		player: *newPlayer(cp.Vector{X: cameraWidth / 2.0, Y: cameraHeight / 2.0}, space),
 		space:  space,
 	}
 
-	game.enemies = append(game.enemies, newEnemy(cp.Vector{X: 778, Y: 200}, space))
-	game.enemies = append(game.enemies, newEnemy(cp.Vector{X: 100, Y: 200}, space))
-	addWalls(space, &game.walls)
+	const (
+		objectGroupWalls = 0
+		objectGroupEnemy = 1
+	)
+	// Add enemies
+	for _, enemyPos := range gameMap.ObjectGroups[objectGroupEnemy].Objects {
+		game.enemies = append(game.enemies, newEnemy(cp.Vector{X: enemyPos.X, Y: enemyPos.Y}, space))
+
+	}
+
+	game.addWalls(gameMap.ObjectGroups[objectGroupWalls].Objects)
+
+	renderer, err := render.NewRenderer(gameMap)
+	panicErr(err)
+
+	err = renderer.RenderLayer(0)
+	panicErr(err)
+	imageDecorations = ebiten.NewImageFromImage(renderer.Result)
+
+	renderer.Clear()
+	err = renderer.RenderLayer(1)
+	panicErr(err)
+	imageComputers = ebiten.NewImageFromImage(renderer.Result)
+
+	renderer.Clear()
+	err = renderer.RenderLayer(2)
+	panicErr(err)
+	imagePlatforms = ebiten.NewImageFromImage(renderer.Result)
 
 	return game
 }
 
-func addWalls(space *cp.Space, walls *[]*wall) {
-	const (
-		wallLeftCenterX        = 3 * wallRadius
-		wallLeftCenterY        = screenHeight - 2.0*screenHeight/5.0
-		wallLeftCenterWidth    = screenWidth / 4.0
-		wallRightCenterX       = screenWidth - screenWidth/4.0 - wallWidth
-		wallRightCenterY       = 2.0 * screenHeight / 5.0
-		wallRightCenterWidth   = screenWidth / 4.0
-		wallTopCenterX         = screenWidth/4.0 + wallWidth
-		wallTopCenterY         = 3 * wallRadius
-		wallTopCenterHeight    = screenHeight / 4.0
-		wallBottomCenterX      = wallRightCenterX
-		wallBottomCenterHeight = screenHeight / 4.0
-		wallBottomCenterY      = screenHeight - wallWidth - wallBottomCenterHeight
-	)
+func (g *game) addWalls(wallObjects []*tiled.Object) {
+	for _, obj := range wallObjects {
+		radius := math.Min(obj.Width, obj.Height) / 2.0
+		x2 := obj.X + obj.Width - radius
+		y2 := obj.Y + obj.Height - radius
+		shape := g.space.AddShape(cp.NewSegment(g.space.StaticBody, cp.Vector{X: obj.X + radius, Y: obj.Y + radius}, cp.Vector{X: x2, Y: y2}, radius))
+		shape.SetElasticity(wallElasticity)
+		shape.SetFriction(wallFriction)
 
-	*walls = append(*walls, newWall(wallRadius, wallRadius, screenWidth-wallRadius, wallRadius, wallRadius, space))                                                   // Top wall
-	*walls = append(*walls, newWall(wallRadius, screenHeight-wallRadius, screenWidth-wallRadius, screenHeight-wallRadius, wallRadius, space))                         // Bottom wall
-	*walls = append(*walls, newWall(wallRadius, 0, wallRadius, screenHeight-wallRadius, wallRadius, space))                                                           // left wall
-	*walls = append(*walls, newWall(screenWidth-wallRadius, 0, screenWidth-wallRadius, screenHeight-wallRadius, wallRadius, space))                                   // right wall
-	*walls = append(*walls, newWall(wallLeftCenterX, wallLeftCenterY, wallLeftCenterX+wallLeftCenterWidth-wallRadius, wallLeftCenterY, wallRadius, space))            // left center wall
-	*walls = append(*walls, newWall(wallRightCenterX, wallRightCenterY, wallRightCenterX+wallRightCenterWidth-wallRadius, wallRightCenterY, wallRadius, space))       // right center wall
-	*walls = append(*walls, newWall(wallTopCenterX, wallTopCenterY, wallTopCenterX, wallTopCenterY+wallTopCenterHeight-wallRadius, wallRadius, space))                // top center wall
-	*walls = append(*walls, newWall(wallBottomCenterX, wallBottomCenterY, wallBottomCenterX, wallBottomCenterY+wallBottomCenterHeight-wallRadius, wallRadius, space)) // bottom center wall
+		g.walls = append(g.walls, shape)
+	}
 }
 
 // Update is called every tick (1/60 [s] by default).
 func (g *game) Update() error {
-	g.space.Step(deltaTime)
-
-	// Update input states(mouse pos and pressed keys)
 	g.input.update()
+	drawOptionsCursor.GeoM.Reset()
+	drawOptionsCursor.GeoM.Translate(g.input.cursorPos.X-crosshairRadius, g.input.cursorPos.Y-crosshairRadius)
 
-	// Escape from cursor captured mode
-	if g.input.escape {
-		ebiten.SetCursorMode(ebiten.CursorModeHidden)
-	} else if (ebiten.CursorMode() == ebiten.CursorModeHidden) && g.input.attract {
-		ebiten.SetCursorMode(ebiten.CursorModeCaptured)
+	g.updateSettings()
+
+	if gamePaused {
+		return nil
 	}
+
+	g.space.Step(deltaTime)
 
 	g.rayCast()
 
 	// Update player and player's gun
 	g.player.update(&g.input, &g.rayHitInfo)
 
-	// Sen negation of the player's gun force
+	// Send negation of the player's gun force to the enemy
 	var force cp.Vector
 	for _, enemy := range g.enemies {
 		if g.rayHitInfo.Shape == enemy.shape {
@@ -171,12 +213,24 @@ func (g *game) Update() error {
 
 	// Update geometry matrices
 	const rayHitImageRadius = rayHitImageWidth / 2.0
-	drawOptionsCursor.GeoM.Reset()
-	drawOptionsCursor.GeoM.Translate(g.input.cursorPos.X-crosshairRadius, g.input.cursorPos.Y-crosshairRadius)
+
 	drawOptionsRayHit.GeoM.Reset()
 	drawOptionsRayHit.GeoM.Translate(g.rayHitInfo.Point.X-rayHitImageRadius, g.rayHitInfo.Point.Y-rayHitImageRadius)
 
 	return nil
+}
+
+func (g *game) updateSettings() {
+	// Escape from cursor captured mode
+	if g.input.escape {
+		ebiten.SetCursorMode(ebiten.CursorModeHidden)
+	} else if (ebiten.CursorMode() == ebiten.CursorModeHidden) && g.input.repel {
+		ebiten.SetCursorMode(ebiten.CursorModeCaptured)
+	}
+
+	if g.input.pausePlay {
+		gamePaused = !gamePaused
+	}
 }
 
 func (g *game) rayCast() {
@@ -185,9 +239,9 @@ func (g *game) rayCast() {
 	var success bool
 	g.rayHitInfo.Alpha = 1.5
 
-	// Check wall
-	for _, wall := range g.walls {
-		success = wall.shape.SegmentQuery(gunRay[0], gunRay[1], 0, &info)
+	// Check walls
+	for _, shape := range g.walls {
+		success = shape.SegmentQuery(gunRay[0], gunRay[1], 0, &info)
 		if success && info.Alpha < g.rayHitInfo.Alpha {
 			g.rayHitInfo = info
 		}
@@ -207,18 +261,20 @@ func (g *game) rayCast() {
 func (g *game) Draw(screen *ebiten.Image) {
 	screen.Fill(colorBackground)
 
-	// Draw walls
-	for _, wall := range g.walls {
-		wall.draw(screen)
-	}
+	// Draw decorations
+	screen.DrawImage(imageDecorations, &ebiten.DrawImageOptions{})
+	screen.DrawImage(imageComputers, &ebiten.DrawImageOptions{})
 
 	// Draw player and its gun
 	g.player.draw(screen)
 
-	// Draw enemy
+	// Draw enemies
 	for _, enemy := range g.enemies {
 		enemy.draw(screen)
 	}
+
+	// Draw walls and platforms
+	screen.DrawImage(imagePlatforms, &ebiten.DrawImageOptions{})
 
 	// Draw crosshair
 	screen.DrawImage(imageCursor, &drawOptionsCursor)
@@ -243,7 +299,7 @@ func (g *game) Draw(screen *ebiten.Image) {
 // If you don't have to adjust the screen size with the outside size, just return a fixed size.
 func (g *game) Layout(outsideWidth, outsideHeight int) (int, int) {
 	// return outsideWidth, outsideHeight
-	return screenWidth, screenHeight
+	return cameraWidth, cameraHeight
 }
 
 func main() {

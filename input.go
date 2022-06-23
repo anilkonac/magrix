@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/jakecoffman/cp"
 )
 
@@ -13,7 +14,8 @@ type input struct {
 	attract bool
 	repel   bool
 
-	escape bool
+	escape    bool
+	pausePlay bool
 }
 
 func (i *input) update() {
@@ -31,4 +33,5 @@ func (i *input) update() {
 	i.repel = ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft)
 
 	i.escape = ebiten.IsKeyPressed(ebiten.KeyEscape)
+	i.pausePlay = inpututil.IsKeyJustPressed(ebiten.KeyP) || inpututil.IsKeyJustPressed(ebiten.KeyPause)
 }
