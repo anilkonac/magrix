@@ -55,7 +55,9 @@ var (
 const mapPath = "assets/level1.tmx"
 
 var (
-	imageMap *ebiten.Image
+	imagePlatforms   *ebiten.Image
+	imageComputers   *ebiten.Image
+	imageDecorations *ebiten.Image
 )
 
 func panicErr(err error) {
@@ -140,12 +142,19 @@ func newGame() *game {
 	renderer, err := render.NewRenderer(gameMap)
 	panicErr(err)
 
-	err = renderer.RenderVisibleLayers()
+	err = renderer.RenderLayer(0)
 	panicErr(err)
-
-	imageMap = ebiten.NewImageFromImage(renderer.Result)
+	imageDecorations = ebiten.NewImageFromImage(renderer.Result)
 
 	renderer.Clear()
+	err = renderer.RenderLayer(1)
+	panicErr(err)
+	imageComputers = ebiten.NewImageFromImage(renderer.Result)
+
+	renderer.Clear()
+	err = renderer.RenderLayer(2)
+	panicErr(err)
+	imagePlatforms = ebiten.NewImageFromImage(renderer.Result)
 
 	return game
 }
@@ -231,15 +240,15 @@ func (g *game) rayCast() {
 func (g *game) Draw(screen *ebiten.Image) {
 	screen.Fill(colorBackground)
 
-	// // Draw walls
-	// for _, wall := range g.walls {
-	// 	wall.draw(screen)
-	// }
-	// Draw map
-	screen.DrawImage(imageMap, &ebiten.DrawImageOptions{})
+	// Draw decorations
+	screen.DrawImage(imageDecorations, &ebiten.DrawImageOptions{})
+	screen.DrawImage(imageComputers, &ebiten.DrawImageOptions{})
 
 	// Draw player and its gun
 	g.player.draw(screen)
+
+	// Draw walls and platforms
+	screen.DrawImage(imagePlatforms, &ebiten.DrawImageOptions{})
 
 	// Draw enemy
 	for _, enemy := range g.enemies {
