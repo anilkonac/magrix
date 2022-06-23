@@ -17,24 +17,22 @@ const (
 )
 
 const (
-	gravity          = 1000.0
-	playerMass       = 1
+	gravity          = 750.0
+	playerMass       = 0.5
 	playerElasticity = 0.0
 	// Taken from cp-examples/player and modified
 	playerFriction        = playerGroundAccel / (2 * gravity)
-	playerVelocity        = 400.0
-	playerGroundAccelTime = 0.1
+	playerVelocity        = 150.0
+	playerGroundAccelTime = 0.05
 	playerGroundAccel     = playerVelocity / playerGroundAccelTime
-	playerAirAccelTime    = 0.5
-	playerAirAccel        = playerVelocity / playerAirAccelTime
-	jumpHeight            = 60.0
+	jumpHeightTile        = 1.5
 	//
 )
 
 const (
 	gunRange     = cameraWidth + cameraHeight
-	gunForceMult = 45
-	gunForceMax  = 1500
+	gunForceMult = 12
+	gunForceMax  = 600
 	gunMinAlpha  = 1e-5 // required to prevent player pos to go NaN
 )
 
@@ -130,7 +128,8 @@ func (p *player) update(input *input, rayHitInfo *cp.SegmentQueryInfo) {
 }
 
 func (p *player) checkOnGround() {
-	// Grab the grounding normal from last frame - Taken from cp-examples/player
+	const groundNormalYThreshold = 0.5
+	// Grab the grounding normal from last frame - Taken from cp-examples/player and modified
 	groundNormal := cp.Vector{}
 	p.body.EachArbiter(func(arb *cp.Arbiter) {
 		n := arb.Normal() //.Neg()
@@ -139,7 +138,7 @@ func (p *player) checkOnGround() {
 			groundNormal = n
 		}
 	})
-	p.onGround = groundNormal.Y > 0
+	p.onGround = groundNormal.Y > groundNormalYThreshold
 }
 
 func (p *player) handleInputs(input *input, rayHitInfo *cp.SegmentQueryInfo) {
@@ -158,7 +157,7 @@ func (p *player) handleInputs(input *input, rayHitInfo *cp.SegmentQueryInfo) {
 	}
 
 	if input.up && p.onGround {
-		jumpV := math.Sqrt(2.0 * jumpHeight * gravity) // Taken from cp-examples/player
+		jumpV := math.Sqrt(2.0 * jumpHeightTile * tileLength * gravity) // Taken from cp-examples/player
 		p.body.SetVelocityVector(p.body.Velocity().Add(cp.Vector{X: 0, Y: -jumpV}))
 	}
 	// Apply air control if not on ground
@@ -184,7 +183,9 @@ func (p *player) handleInputs(input *input, rayHitInfo *cp.SegmentQueryInfo) {
 	} else {
 		p.stateGun = gunStateIdle
 	}
-	// fmt.Printf("Player X: %.2f\tY:%.2f\tForce X: %.2f\tY:%.2f\n", p.pos.X, p.pos.Y, force.X, force.Y)
+
+	// v := p.body.Velocity()
+	// fmt.Printf("Velocity X: %.2f\tY: %.2f\t\tForce X: %.2f\tY:%.2f\n", v.X, v.Y, p.gunForce.X, p.gunForce.Y)
 }
 
 func (p *player) updateGeometryMatrices() {

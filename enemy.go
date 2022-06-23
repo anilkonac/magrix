@@ -11,11 +11,11 @@ import (
 )
 
 const (
-	enemyMass       = 2.0
-	enemyFriction   = 0.75
+	enemyMass       = 0.75
+	enemyFriction   = 0.5
+	enemyMoment     = 50
 	enemyWidthTile  = 1
 	enemyHeightTile = 2
-	enemyMoment     = 75
 )
 
 var (
@@ -53,7 +53,7 @@ func newEnemy(pos cp.Vector, space *cp.Space) *enemy {
 	space.AddBody(enemy.body)
 	space.AddShape(enemy.shape)
 
-	// go enemy.standUpBot() // TODO: Tweak parameters in de standUpBot() function
+	go enemy.standUpBot()
 
 	return enemy
 }
@@ -83,21 +83,29 @@ func enemyUpdateVelocity(body *cp.Body, gravity cp.Vector, damping, dt float64) 
 
 // Goroutine
 func (e *enemy) standUpBot() {
-	const standUpForceY = -30000
-	const standUpAngularVelocity = -35.0
+	const standUpForceY = -8000
+	const standUpAngularVelocity = -4
 	const checkIntervalSec = 3.0
 	const checkEpsilon = 1.0
 
+	vForce := cp.Vector{X: 0, Y: standUpForceY}
+
 	ticker := time.NewTicker(time.Second * checkIntervalSec)
 	for range ticker.C {
-		angleDegMod := math.Mod(e.body.Angle()*cp.DegreeConst, 180)
+		if gamePaused {
+			continue
+		}
+		angleDeg := e.body.Angle() * cp.DegreeConst
+		angleDegMod := math.Mod(angleDeg, 180)
+		// isNegative := math.Signbit(angleDeg)
+		// fmt.Printf("angleDeg: %.2f\tisNegative: %v\n", angleDeg, isNegative)
 
 		if math.Abs(angleDegMod-90) < checkEpsilon {
-			e.body.SetAngularVelocity(-standUpAngularVelocity)
-			e.body.SetForce(cp.Vector{X: 0, Y: standUpForceY})
-		} else if math.Abs(angleDegMod+90) < checkEpsilon {
 			e.body.SetAngularVelocity(standUpAngularVelocity)
-			e.body.SetForce(cp.Vector{X: 0, Y: standUpForceY})
+			e.body.SetForce(vForce)
+		} else if math.Abs(angleDegMod+90) < checkEpsilon {
+			e.body.SetAngularVelocity(-standUpAngularVelocity)
+			e.body.SetForce(vForce)
 		}
 	}
 }

@@ -27,7 +27,7 @@ const (
 	crosshairRadius      = 6
 	crosshairInnerRadius = 2
 	rayHitImageWidth     = 4
-	wallElasticity       = 1
+	wallElasticity       = 0
 	wallFriction         = 1
 	// spaceIterations      = 10
 )
@@ -59,6 +59,8 @@ var (
 	imageComputers   *ebiten.Image
 	imageDecorations *ebiten.Image
 )
+
+var gamePaused bool
 
 func panicErr(err error) {
 	if err != nil {
@@ -134,13 +136,17 @@ func newGame() *game {
 		space:  space,
 	}
 
+	const (
+		objectGroupWalls = 0
+		objectGroupEnemy = 1
+	)
 	// Add enemies
-	for _, enemyPos := range gameMap.ObjectGroups[1].Objects {
+	for _, enemyPos := range gameMap.ObjectGroups[objectGroupEnemy].Objects {
 		game.enemies = append(game.enemies, newEnemy(cp.Vector{X: enemyPos.X, Y: enemyPos.Y}, space))
 
 	}
 
-	game.addWalls(gameMap.ObjectGroups[0].Objects)
+	game.addWalls(gameMap.ObjectGroups[objectGroupWalls].Objects)
 
 	renderer, err := render.NewRenderer(gameMap)
 	panicErr(err)
@@ -177,17 +183,18 @@ func (g *game) addWalls(wallObjects []*tiled.Object) {
 
 // Update is called every tick (1/60 [s] by default).
 func (g *game) Update() error {
-	g.space.Step(deltaTime)
-
 	// Update input states(mouse pos and pressed keys)
 	g.input.update()
+	drawOptionsCursor.GeoM.Reset()
+	drawOptionsCursor.GeoM.Translate(g.input.cursorPos.X-crosshairRadius, g.input.cursorPos.Y-crosshairRadius)
 
-	// Escape from cursor captured mode
-	if g.input.escape {
-		ebiten.SetCursorMode(ebiten.CursorModeHidden)
-	} else if (ebiten.CursorMode() == ebiten.CursorModeHidden) && g.input.attract {
-		ebiten.SetCursorMode(ebiten.CursorModeCaptured)
+	g.updateSettings()
+
+	if gamePaused {
+		return nil
 	}
+
+	g.space.Step(deltaTime)
 
 	g.rayCast()
 
@@ -207,12 +214,24 @@ func (g *game) Update() error {
 
 	// Update geometry matrices
 	const rayHitImageRadius = rayHitImageWidth / 2.0
-	drawOptionsCursor.GeoM.Reset()
-	drawOptionsCursor.GeoM.Translate(g.input.cursorPos.X-crosshairRadius, g.input.cursorPos.Y-crosshairRadius)
+
 	drawOptionsRayHit.GeoM.Reset()
 	drawOptionsRayHit.GeoM.Translate(g.rayHitInfo.Point.X-rayHitImageRadius, g.rayHitInfo.Point.Y-rayHitImageRadius)
 
 	return nil
+}
+
+func (g *game) updateSettings() {
+	// Escape from cursor captured mode
+	if g.input.escape {
+		ebiten.SetCursorMode(ebiten.CursorModeHidden)
+	} else if (ebiten.CursorMode() == ebiten.CursorModeHidden) && g.input.repel {
+		ebiten.SetCursorMode(ebiten.CursorModeCaptured)
+	}
+
+	if g.input.pausePlay {
+		gamePaused = !gamePaused
+	}
 }
 
 func (g *game) rayCast() {
@@ -250,7 +269,7 @@ func (g *game) Draw(screen *ebiten.Image) {
 	// Draw player and its gun
 	g.player.draw(screen)
 
-	// Draw enemy
+	// Draw enemies
 	for _, enemy := range g.enemies {
 		enemy.draw(screen)
 	}
