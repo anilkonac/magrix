@@ -38,7 +38,7 @@ var (
 
 func init() {
 	animPlayerIdle = newAnim("1-4", 1, playerIdleBytes, 64, 32, enemy1IdleDurationMs)
-	animPlayerWalk = newAnim("1-8", 1, playerWalkBytes, 64, 32, enemy1IdleDurationMs)
+	animPlayerWalk = newAnim("1-8", 1, playerWalkBytes, 128, 32, enemy1IdleDurationMs)
 	animEnemy1Idle = newAnim("1-4", 1, enemy1IdleBytes, 64, 32, enemy1IdleDurationMs)
 }
 
