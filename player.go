@@ -4,6 +4,7 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"image/png"
 	"math"
 	"time"
@@ -17,7 +18,7 @@ import (
 
 const (
 	playerWidthTile  = 1
-	playerHeightTile = 2
+	playerHeightTile = 1.6
 	gunWidthTile     = 1
 	gunHeightTile    = 1.0 / 3.0
 )
@@ -61,6 +62,8 @@ var (
 	imageGunAttract *ebiten.Image
 	imageGunRepel   *ebiten.Image
 )
+
+var posGunRelative cp.Vector
 
 func init() {
 	img, err := png.Decode(bytes.NewReader(gunIdleBytes))
@@ -106,11 +109,11 @@ func newPlayer(pos cp.Vector, space *cp.Space) *player {
 		},
 		drawOptions: ganim8.DrawOptions{
 			OriginX: 0.5,
-			OriginY: 0.5,
+			OriginY: 0.6,
 			ScaleX:  1.0,
 			ScaleY:  1.0,
 		},
-		curAnim: playerIdleAnim,
+		curAnim: animPlayerIdle,
 	}
 
 	player.body = cp.NewBody(playerMass, cp.INFINITY)
@@ -122,6 +125,8 @@ func newPlayer(pos cp.Vector, space *cp.Space) *player {
 	space.AddBody(player.body)
 	space.AddShape(player.shape)
 
+	posGunRelative = cp.Vector{X: tileLength / 7.0, Y: -tileLength / 4.0}
+
 	return player
 }
 
@@ -130,7 +135,11 @@ func (p *player) update(input *input, rayHitInfo *cp.SegmentQueryInfo) {
 	p.pos = p.body.Position()
 
 	// Update gun position
-	p.posGun = p.pos
+	if p.angleGun < -1.5 || p.angleGun > 1.5 {
+		p.posGun = p.pos.Add(cp.Vector{-posGunRelative.X, posGunRelative.Y})
+	} else {
+		p.posGun = p.pos.Add(posGunRelative)
+	}
 
 	// Update gun angle
 	distX := input.cursorPos.X - p.posGun.X
@@ -152,6 +161,8 @@ func (p *player) update(input *input, rayHitInfo *cp.SegmentQueryInfo) {
 	// fmt.Printf("Friction: %.2f\tVel X: %.2f\tVel Y: %.2f\n", p.shape.Friction(), v.X, v.Y)
 	p.curAnim.Update(time.Millisecond * animDeltaTime)
 	p.updateGeometryMatrices()
+
+	// fmt.Printf("p.angleGun: %v\n", p.angleGun)
 }
 
 func (p *player) checkOnGround() {
@@ -219,11 +230,40 @@ func (p *player) updateGeometryMatrices() {
 	// Player
 	p.drawOptions.X = p.pos.X
 	p.drawOptions.Y = p.pos.Y
+	if p.angleGun < -1.5 || p.angleGun > 1.5 {
+		p.drawOptions.ScaleX = -1.0
+	} else {
+		p.drawOptions.ScaleX = 1.0
+	}
 
 	// Gun
 	p.drawOptionsGun.GeoM.Reset()
+	// TODO: Fix gun drawing when player turns to the left
+	// if p.angleGun < -1.5 || p.angleGun > 1.5 {
+	// 	p.drawOptionsGun.GeoM.Scale(0, -1.0)
+	// }
+	// angleDeg := p.angleGun * cp.DegreeConst
+	// if angleDeg < -90.0 {
+	// 	angleDeg = -180.0 - angleDeg
+	// } else if angleDeg > 90 {
+	// 	angleDeg = 180 - angleDeg
+	// }
+	// fmt.Printf("angleDeg: %v\n", angleDeg)
+
+	// angleDeg := p.angleGun * cp.DegreeConst
+	// var scale float64 = 1.0
+	angle := p.angleGun
+	// if angle < -math.Pi/2.0 {
+	// 	// angle = -math.Pi - angle
+	// 	scale = -1.0
+	// } else if angle > math.Pi/2.0 {
+	// 	// angle = math.Pi - angle
+	// 	scale = -1.0
+	// }
+	fmt.Printf("angle: %v\n", angle)
+	// p.drawOptionsGun.GeoM.Scale(scale, scale)
 	p.drawOptionsGun.GeoM.Translate(0, -p.sizeGun.Y/2.0)
-	p.drawOptionsGun.GeoM.Rotate(p.angleGun)
+	p.drawOptionsGun.GeoM.Rotate(angle)
 	p.drawOptionsGun.GeoM.Translate(p.posGun.X, p.posGun.Y)
 }
 

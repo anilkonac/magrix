@@ -19,11 +19,6 @@ const (
 	enemyHeightTile = 1.5
 )
 
-const (
-	gridWidth, gridHeight = 16, 32
-	enemy1IdleDurationMs  = 200
-)
-
 type enemy struct {
 	size        cp.Vector
 	drawOptions ganim8.DrawOptions
@@ -43,7 +38,7 @@ func newEnemy(pos cp.Vector, space *cp.Space) *enemy {
 			ScaleX:  1.00,
 			ScaleY:  1.00,
 		},
-		curAnim: enemy1IdleAnim,
+		curAnim: animEnemy1Idle,
 	}
 
 	body := cp.NewBody(enemyMass, enemyMoment)

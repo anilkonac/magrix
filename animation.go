@@ -12,6 +12,11 @@ import (
 	"github.com/yohamta/ganim8/v2"
 )
 
+const (
+	gridWidth, gridHeight = 16, 32
+	enemy1IdleDurationMs  = 200
+)
+
 var (
 	animDeltaTime = time.Duration(math.Ceil(deltaTime * 1000))
 )
@@ -21,42 +26,29 @@ var (
 	enemy1IdleBytes []byte
 	//go:embed assets/player_idle.png
 	playerIdleBytes []byte
+	//go:embed assets/player_walk.png
+	playerWalkBytes []byte
 )
 
 var (
-	enemy1IdleAnim *ganim8.Animation
-	playerIdleAnim *ganim8.Animation
+	animEnemy1Idle *ganim8.Animation
+	animPlayerIdle *ganim8.Animation
+	animPlayerWalk *ganim8.Animation
 )
 
 func init() {
-	initPlayerIdle()
-	initEnemy1Idle()
+	animPlayerIdle = newAnim("1-4", 1, playerIdleBytes, 64, 32, enemy1IdleDurationMs)
+	animPlayerWalk = newAnim("1-8", 1, playerWalkBytes, 64, 32, enemy1IdleDurationMs)
+	animEnemy1Idle = newAnim("1-4", 1, enemy1IdleBytes, 64, 32, enemy1IdleDurationMs)
 }
 
-func initPlayerIdle() {
-	// Prepare player idle anim
-	const column string = "1-4"
-	const row int = 1
-	img, err := png.Decode(bytes.NewReader(playerIdleBytes))
+func newAnim(column string, row int, fileBytes []byte, imageWidth, imageHeight, frameDurationMs int) *ganim8.Animation {
+	img, err := png.Decode(bytes.NewReader(fileBytes))
 	panicErr(err)
-	playerIdleImage := ebiten.NewImageFromImage(img)
+	image := ebiten.NewImageFromImage(img)
 
-	grid := ganim8.NewGrid(gridWidth, gridHeight, 64, 32)
+	grid := ganim8.NewGrid(gridWidth, gridHeight, imageWidth, imageHeight)
 	frames := grid.GetFrames(column, row)
-	spr := ganim8.NewSprite(playerIdleImage, frames)
-	playerIdleAnim = ganim8.NewAnimation(spr, time.Millisecond*enemy1IdleDurationMs, ganim8.Nop)
-}
-
-func initEnemy1Idle() {
-	// Prepare enemy 1 idle anim
-	const column string = "1-4"
-	const row int = 1
-	img, err := png.Decode(bytes.NewReader(enemy1IdleBytes))
-	panicErr(err)
-	enemy1IdleImage := ebiten.NewImageFromImage(img)
-
-	grid := ganim8.NewGrid(gridWidth, gridHeight, 64, 32)
-	frames := grid.GetFrames(column, row)
-	spr := ganim8.NewSprite(enemy1IdleImage, frames)
-	enemy1IdleAnim = ganim8.NewAnimation(spr, time.Millisecond*enemy1IdleDurationMs, ganim8.Nop)
+	spr := ganim8.NewSprite(image, frames)
+	return ganim8.NewAnimation(spr, time.Millisecond*time.Duration(frameDurationMs), ganim8.Nop)
 }
