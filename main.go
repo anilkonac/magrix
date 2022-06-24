@@ -34,9 +34,9 @@ const (
 
 var (
 	colorBackground = color.RGBA{38, 38, 38, 255}
-	colorGun        = color.RGBA{242, 129, 35, 255}  // ~ Princeton Orange
-	colorGunAttract = color.RGBA{216, 17, 89, 255}   // ~ Ruby
-	colorGunRepel   = color.RGBA{7, 160, 195, 255}   // ~ Blue Green
+	colorGun        = color.RGBA{253, 147, 89, 255}
+	colorGunAttract = color.RGBA{216, 17, 89, 255} // ~ Ruby
+	colorGunRepel   = color.RGBA{80, 142, 237, 255}
 	colorPlayer     = color.RGBA{155, 201, 149, 255} // ~ Dark Sea Green
 	colorCrosshair  = color.RGBA{255, 251, 255, 255} // ~ Snow
 	colorEnemy      = color.RGBA{165, 1, 4, 255}     // ~ Rufous

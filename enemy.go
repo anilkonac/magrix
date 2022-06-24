@@ -3,12 +3,8 @@
 package main
 
 import (
-	"bytes"
-	"image/png"
 	"math"
 	"time"
-
-	_ "embed"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/jakecoffman/cp"
@@ -20,34 +16,13 @@ const (
 	enemyFriction   = 0.75
 	enemyMoment     = 50
 	enemyWidthTile  = 1
-	enemyHeightTile = 2
+	enemyHeightTile = 1.5
 )
 
 const (
 	gridWidth, gridHeight = 16, 32
 	enemy1IdleDurationMs  = 200
 )
-
-var (
-	animDeltaTimeMs = time.Duration(math.Ceil(deltaTime * 1000))
-	//go:embed assets/enemy1_idle.png
-	enemy1IdleFile []byte
-	enemy1IdleAnim *ganim8.Animation
-)
-
-func init() {
-	// Prepare enemy 1 idle anim
-	const column string = "1-4"
-	const row int = 1
-	img, err := png.Decode(bytes.NewReader(enemy1IdleFile))
-	panicErr(err)
-	enemy1IdleImage := ebiten.NewImageFromImage(img)
-
-	grid := ganim8.NewGrid(16, 32, 64, 32)
-	frames := grid.GetFrames(column, row)
-	spr := ganim8.NewSprite(enemy1IdleImage, frames)
-	enemy1IdleAnim = ganim8.NewAnimation(spr, time.Millisecond*enemy1IdleDurationMs, ganim8.Nop)
-}
 
 type enemy struct {
 	size        cp.Vector
@@ -59,15 +34,14 @@ type enemy struct {
 
 func newEnemy(pos cp.Vector, space *cp.Space) *enemy {
 	enemy := &enemy{
-		// pos: pos,
 		size: cp.Vector{
 			X: enemyWidthTile * tileLength,
 			Y: enemyHeightTile * tileLength},
 		drawOptions: ganim8.DrawOptions{
 			OriginX: 0.5,
-			OriginY: 0.5,
-			ScaleX:  1.0,
-			ScaleY:  1.0,
+			OriginY: 0.64,
+			ScaleX:  1.00,
+			ScaleY:  1.00,
 		},
 		curAnim: enemy1IdleAnim,
 	}
@@ -97,7 +71,7 @@ func (e *enemy) update(force *cp.Vector) {
 	}
 
 	// Update animation
-	e.curAnim.Update(time.Millisecond * animDeltaTimeMs)
+	e.curAnim.Update(time.Millisecond * animDeltaTime)
 	e.drawOptions.X = pos.X
 	e.drawOptions.Y = pos.Y
 	e.drawOptions.Rotate = e.body.Angle()

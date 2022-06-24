@@ -3,10 +3,16 @@
 package main
 
 import (
+	"bytes"
+	"image/png"
 	"math"
+	"time"
+
+	_ "embed"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/jakecoffman/cp"
+	"github.com/yohamta/ganim8/v2"
 )
 
 const (
@@ -45,17 +51,29 @@ const (
 )
 
 var (
-	imagePlayer     = ebiten.NewImage(1, 1)
-	imageGun        = ebiten.NewImage(1, 1)
-	imageGunAttract = ebiten.NewImage(1, 1)
-	imageGunRepel   = ebiten.NewImage(1, 1)
+	//go:embed assets/gun_idle.png
+	gunIdleBytes []byte
+	//go:embed assets/gun_attract.png
+	gunAttractBytes []byte
+	//go:embed assets/gun_repel.png
+	gunRepelBytes   []byte
+	imageGunIdle    *ebiten.Image
+	imageGunAttract *ebiten.Image
+	imageGunRepel   *ebiten.Image
 )
 
 func init() {
-	imagePlayer.Fill(colorPlayer)
-	imageGun.Fill(colorGun)
-	imageGunAttract.Fill(colorGunAttract)
-	imageGunRepel.Fill(colorGunRepel)
+	img, err := png.Decode(bytes.NewReader(gunIdleBytes))
+	panicErr(err)
+	imageGunIdle = ebiten.NewImageFromImage(img)
+
+	img, err = png.Decode(bytes.NewReader(gunAttractBytes))
+	panicErr(err)
+	imageGunAttract = ebiten.NewImageFromImage(img)
+
+	img, err = png.Decode(bytes.NewReader(gunRepelBytes))
+	panicErr(err)
+	imageGunRepel = ebiten.NewImageFromImage(img)
 }
 
 type player struct {
@@ -66,8 +84,9 @@ type player struct {
 	angleGun       float64
 	shape          *cp.Shape
 	body           *cp.Body
-	drawOptions    ebiten.DrawImageOptions
+	drawOptions    ganim8.DrawOptions
 	drawOptionsGun ebiten.DrawImageOptions
+	curAnim        *ganim8.Animation
 	onGround       bool
 	gunRay         [2]cp.Vector
 	gunForce       cp.Vector
@@ -85,6 +104,13 @@ func newPlayer(pos cp.Vector, space *cp.Space) *player {
 			X: gunWidthTile * tileLength,
 			Y: gunHeightTile * tileLength,
 		},
+		drawOptions: ganim8.DrawOptions{
+			OriginX: 0.5,
+			OriginY: 0.5,
+			ScaleX:  1.0,
+			ScaleY:  1.0,
+		},
+		curAnim: playerIdleAnim,
 	}
 
 	player.body = cp.NewBody(playerMass, cp.INFINITY)
@@ -124,6 +150,7 @@ func (p *player) update(input *input, rayHitInfo *cp.SegmentQueryInfo) {
 
 	// v := p.body.Velocity()
 	// fmt.Printf("Friction: %.2f\tVel X: %.2f\tVel Y: %.2f\n", p.shape.Friction(), v.X, v.Y)
+	p.curAnim.Update(time.Millisecond * animDeltaTime)
 	p.updateGeometryMatrices()
 }
 
@@ -190,21 +217,18 @@ func (p *player) handleInputs(input *input, rayHitInfo *cp.SegmentQueryInfo) {
 
 func (p *player) updateGeometryMatrices() {
 	// Player
-	p.drawOptions.GeoM.Reset()
-	p.drawOptions.GeoM.Scale(p.size.X, p.size.Y)
-	p.drawOptions.GeoM.Translate(p.pos.X-p.size.X/2.0, p.pos.Y-p.size.Y/2.0)
+	p.drawOptions.X = p.pos.X
+	p.drawOptions.Y = p.pos.Y
 
 	// Gun
 	p.drawOptionsGun.GeoM.Reset()
-	p.drawOptionsGun.GeoM.Scale(p.sizeGun.X, p.sizeGun.Y)
 	p.drawOptionsGun.GeoM.Translate(0, -p.sizeGun.Y/2.0)
 	p.drawOptionsGun.GeoM.Rotate(p.angleGun)
 	p.drawOptionsGun.GeoM.Translate(p.posGun.X, p.posGun.Y)
 }
 
 func (p *player) draw(dst *ebiten.Image) {
-	// Draw prototype player
-	dst.DrawImage(imagePlayer, &p.drawOptions)
+	p.curAnim.Draw(dst, &p.drawOptions)
 
 	// Draw prototype gun
 	if p.stateGun == gunStateAttract {
@@ -212,7 +236,7 @@ func (p *player) draw(dst *ebiten.Image) {
 	} else if p.stateGun == gunStateRepel {
 		dst.DrawImage(imageGunRepel, &p.drawOptionsGun)
 	} else {
-		dst.DrawImage(imageGun, &p.drawOptionsGun)
+		dst.DrawImage(imageGunIdle, &p.drawOptionsGun)
 	}
 
 	// ebitenutil.DrawLine(dst, p.gunRay[0].X, p.gunRay[0].Y, p.gunRay[1].X, p.gunRay[1].Y, colorCrosshair)
