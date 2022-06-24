@@ -3,11 +3,16 @@
 package main
 
 import (
+	"bytes"
+	"image/png"
 	"math"
 	"time"
 
+	_ "embed"
+
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/jakecoffman/cp"
+	"github.com/yohamta/ganim8/v2"
 )
 
 const (
@@ -18,28 +23,53 @@ const (
 	enemyHeightTile = 2
 )
 
+const (
+	gridWidth, gridHeight = 16, 32
+	enemy1IdleDurationMs  = 200
+)
+
 var (
-	enemyImage = ebiten.NewImage(1, 1)
+	animDeltaTimeMs = time.Duration(math.Ceil(deltaTime * 1000))
+	//go:embed assets/enemy1_idle.png
+	enemy1IdleFile []byte
+	enemy1IdleAnim *ganim8.Animation
 )
 
 func init() {
-	enemyImage.Fill(colorEnemy)
+	// Prepare enemy 1 idle anim
+	const column string = "1-4"
+	const row int = 1
+	img, err := png.Decode(bytes.NewReader(enemy1IdleFile))
+	panicErr(err)
+	enemy1IdleImage := ebiten.NewImageFromImage(img)
+
+	grid := ganim8.NewGrid(16, 32, 64, 32)
+	frames := grid.GetFrames(column, row)
+	spr := ganim8.NewSprite(enemy1IdleImage, frames)
+	enemy1IdleAnim = ganim8.NewAnimation(spr, time.Millisecond*enemy1IdleDurationMs, ganim8.Nop)
 }
 
 type enemy struct {
-	pos         cp.Vector
 	size        cp.Vector
-	drawOptions ebiten.DrawImageOptions
+	drawOptions ganim8.DrawOptions
 	body        *cp.Body
 	shape       *cp.Shape
+	curAnim     *ganim8.Animation
 }
 
 func newEnemy(pos cp.Vector, space *cp.Space) *enemy {
 	enemy := &enemy{
-		pos: pos,
+		// pos: pos,
 		size: cp.Vector{
 			X: enemyWidthTile * tileLength,
 			Y: enemyHeightTile * tileLength},
+		drawOptions: ganim8.DrawOptions{
+			OriginX: 0.5,
+			OriginY: 0.5,
+			ScaleX:  1.0,
+			ScaleY:  1.0,
+		},
+		curAnim: enemy1IdleAnim,
 	}
 
 	body := cp.NewBody(enemyMass, enemyMoment)
@@ -60,22 +90,21 @@ func newEnemy(pos cp.Vector, space *cp.Space) *enemy {
 }
 
 func (e *enemy) update(force *cp.Vector) {
-	e.pos = e.body.Position()
+	pos := e.body.Position()
 
 	if force != nil {
 		e.body.SetForce(*force)
 	}
 
-	angle := e.body.Angle()
-	e.drawOptions.GeoM.Reset()
-	e.drawOptions.GeoM.Scale(e.size.X, e.size.Y)
-	e.drawOptions.GeoM.Translate(-e.size.X/2.0, -e.size.Y/2.0)
-	e.drawOptions.GeoM.Rotate(angle)
-	e.drawOptions.GeoM.Translate(e.pos.X, e.pos.Y)
+	// Update animation
+	e.curAnim.Update(time.Millisecond * animDeltaTimeMs)
+	e.drawOptions.X = pos.X
+	e.drawOptions.Y = pos.Y
+	e.drawOptions.Rotate = e.body.Angle()
 }
 
 func (e *enemy) draw(dst *ebiten.Image) {
-	dst.DrawImage(enemyImage, &e.drawOptions)
+	e.curAnim.Draw(dst, &e.drawOptions)
 }
 
 func enemyUpdateVelocity(body *cp.Body, gravity cp.Vector, damping, dt float64) {

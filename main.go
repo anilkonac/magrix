@@ -136,18 +136,25 @@ func newGame() *game {
 		space:  space,
 	}
 
+	game.loadMap(gameMap)
+
+	return game
+}
+
+func (g *game) loadMap(gameMap *tiled.Map) {
 	const (
 		objectGroupWalls = 0
 		objectGroupEnemy = 1
 	)
 	// Add enemies
 	for _, enemyPos := range gameMap.ObjectGroups[objectGroupEnemy].Objects {
-		game.enemies = append(game.enemies, newEnemy(cp.Vector{X: enemyPos.X, Y: enemyPos.Y}, space))
+		g.enemies = append(g.enemies, newEnemy(cp.Vector{X: enemyPos.X, Y: enemyPos.Y}, g.space))
 
 	}
 
-	game.addWalls(gameMap.ObjectGroups[objectGroupWalls].Objects)
+	g.addWalls(gameMap.ObjectGroups[objectGroupWalls].Objects)
 
+	// Render layer images
 	renderer, err := render.NewRenderer(gameMap)
 	panicErr(err)
 
@@ -164,8 +171,6 @@ func newGame() *game {
 	err = renderer.RenderLayer(2)
 	panicErr(err)
 	imagePlatforms = ebiten.NewImageFromImage(renderer.Result)
-
-	return game
 }
 
 func (g *game) addWalls(wallObjects []*tiled.Object) {
