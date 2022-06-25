@@ -52,12 +52,31 @@ type rocketManager struct {
 	rockets []*rocket
 }
 
-func (m *rocketManager) update() {
+func (m *rocketManager) update() (hitBodies []*cp.Body) {
 	animRocket.Update(animDeltaTime)
-	for _, rocket := range m.rockets {
+	rocketsToBeDeleted := make([]int, 0, 8)
+	for iRocket, rocket := range m.rockets {
 		rocket.body.EachArbiter(func(arb *cp.Arbiter) {
-			count := arb.Count()
-			fmt.Printf("count: %v\n", count)
+			// count := arb.Count()
+			// count := arb.ContactPointSet().Count
+			// fmt.Printf("count: %v\n", count)
+			hasHit := arb.IsFirstContact()
+			// contactPointSet := arb.ContactPointSet()
+			fmt.Printf("hasHit: %v\n", hasHit)
+			if hasHit {
+				bodyA, bodyB := arb.Bodies()
+				if bodyA != rocket.body {
+					hitBodies = append(hitBodies, bodyA)
+				} else {
+					hitBodies = append(hitBodies, bodyB)
+				}
+
+				// Mark this rocket to be deleted
+				rocketsToBeDeleted = append(rocketsToBeDeleted, iRocket)
+			}
+
+			// animExplosion
+			// m.explosions = append(m.explosions, newExplosion(arb.))
 		})
 
 		// Update position
@@ -69,6 +88,17 @@ func (m *rocketManager) update() {
 		vel := rocket.body.Velocity()
 		rocket.body.SetVelocity(vel.X, 0)
 	}
+
+	// TODO: Object pooling?
+	// Delete hit rockets
+	for _, rocketIndex := range rocketsToBeDeleted {
+		// Repeat error: slice bounds out of range
+		copy(m.rockets[rocketIndex:], m.rockets[rocketIndex+1:])
+		m.rockets[len(m.rockets)-1] = nil // or the zero value of T
+		m.rockets = m.rockets[:len(m.rockets)-1]
+	}
+
+	return
 }
 
 func (m *rocketManager) draw(dst *ebiten.Image) {

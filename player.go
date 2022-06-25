@@ -6,7 +6,6 @@ import (
 	"bytes"
 	"image/png"
 	"math"
-	"time"
 
 	_ "embed"
 
@@ -183,7 +182,7 @@ func (p *player) update(input *input, rayHitInfo *cp.SegmentQueryInfo) {
 
 	// v := p.body.Velocity()
 	// fmt.Printf("Friction: %.2f\tVel X: %.2f\tVel Y: %.2f\n", p.shape.Friction(), v.X, v.Y)
-	p.curAnim.Update(time.Millisecond * animDeltaTime)
+	p.curAnim.Update(animDeltaTime)
 	p.updateGeometryMatrices()
 
 	// fmt.Printf("p.angleGun: %v\n", p.angleGun)

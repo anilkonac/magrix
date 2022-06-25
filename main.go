@@ -276,7 +276,7 @@ func (g *game) rayCast() {
 		} else {
 			enemy.attackCooldownSec -= deltaTime
 		}
-		fmt.Printf("success: %v\n", success)
+		// fmt.Printf("success: %v\n", success)
 	}
 
 }

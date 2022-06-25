@@ -14,23 +14,23 @@ import (
 
 const (
 	gridWidth, gridHeight   = 16, 32
-	enemy1IdleDurationMs    = 200
-	playerWalkingDurationMs = 75
+	durationEnemy1IdleMs    = 200
+	durationPlayerWalkingMs = 75
 )
 
 var (
-	animDeltaTime = time.Duration(math.Ceil(deltaTime * 1000))
+	animDeltaTime = time.Millisecond * time.Duration(math.Ceil(deltaTime*1000))
 )
 
 var (
 	//go:embed assets/enemy1_idle.png
-	enemy1IdleBytes []byte
+	byteseEemy1Idle []byte
 	//go:embed assets/player_idle.png
-	playerIdleBytes []byte
+	bytesPlayerIdle []byte
 	//go:embed assets/player_walk.png
-	playerWalkBytes []byte
+	bytesPlayerWalk []byte
 	//go:embed assets/rocket_anim.png
-	rocketBytes []byte
+	bytesRocket []byte
 )
 
 var (
@@ -41,10 +41,10 @@ var (
 )
 
 func init() {
-	animPlayerIdle = newAnim("1-4", 1, playerIdleBytes, gridWidth, gridHeight, 64, 32, enemy1IdleDurationMs)
-	animPlayerWalk = newAnim("1-8", 1, playerWalkBytes, gridWidth, gridHeight, 128, 32, playerWalkingDurationMs)
-	animEnemy1Idle = newAnim("1-4", 1, enemy1IdleBytes, gridWidth, gridHeight, 64, 32, enemy1IdleDurationMs)
-	animRocket = newAnim("1-2", 1, rocketBytes, 16, 16, 32, 16, 50)
+	animPlayerIdle = newAnim("1-4", 1, bytesPlayerIdle, gridWidth, gridHeight, 64, 32, durationEnemy1IdleMs)
+	animPlayerWalk = newAnim("1-8", 1, bytesPlayerWalk, gridWidth, gridHeight, 128, 32, durationPlayerWalkingMs)
+	animEnemy1Idle = newAnim("1-4", 1, byteseEemy1Idle, gridWidth, gridHeight, 64, 32, durationEnemy1IdleMs)
+	animRocket = newAnim("1-2", 1, bytesRocket, 16, 16, 32, 16, 50)
 }
 
 func newAnim(column string, row int, fileBytes []byte, gridWidth, gridHeight, imageWidth, imageHeight, frameDurationMs int) *ganim8.Animation {

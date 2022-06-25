@@ -80,7 +80,7 @@ func (e *enemy) update(force *cp.Vector) {
 	)
 
 	// Update animation
-	e.curAnim.Update(time.Millisecond * animDeltaTime)
+	e.curAnim.Update(animDeltaTime)
 	e.drawOptions.X = pos.X
 	e.drawOptions.Y = pos.Y
 	e.drawOptions.Rotate = e.body.Angle()
