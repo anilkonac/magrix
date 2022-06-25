@@ -8,6 +8,7 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/jakecoffman/cp"
+	"github.com/yohamta/ganim8/v2"
 )
 
 const (
@@ -15,31 +16,29 @@ const (
 	enemyFriction   = 0.75
 	enemyMoment     = 50
 	enemyWidthTile  = 1
-	enemyHeightTile = 2
+	enemyHeightTile = 1.5
 )
-
-var (
-	enemyImage = ebiten.NewImage(1, 1)
-)
-
-func init() {
-	enemyImage.Fill(colorEnemy)
-}
 
 type enemy struct {
-	pos         cp.Vector
 	size        cp.Vector
-	drawOptions ebiten.DrawImageOptions
+	drawOptions ganim8.DrawOptions
 	body        *cp.Body
 	shape       *cp.Shape
+	curAnim     *ganim8.Animation
 }
 
 func newEnemy(pos cp.Vector, space *cp.Space) *enemy {
 	enemy := &enemy{
-		pos: pos,
 		size: cp.Vector{
 			X: enemyWidthTile * tileLength,
 			Y: enemyHeightTile * tileLength},
+		drawOptions: ganim8.DrawOptions{
+			OriginX: 0.5,
+			OriginY: 0.64,
+			ScaleX:  1.00,
+			ScaleY:  1.00,
+		},
+		curAnim: animEnemy1Idle,
 	}
 
 	body := cp.NewBody(enemyMass, enemyMoment)
@@ -60,22 +59,21 @@ func newEnemy(pos cp.Vector, space *cp.Space) *enemy {
 }
 
 func (e *enemy) update(force *cp.Vector) {
-	e.pos = e.body.Position()
+	pos := e.body.Position()
 
 	if force != nil {
 		e.body.SetForce(*force)
 	}
 
-	angle := e.body.Angle()
-	e.drawOptions.GeoM.Reset()
-	e.drawOptions.GeoM.Scale(e.size.X, e.size.Y)
-	e.drawOptions.GeoM.Translate(-e.size.X/2.0, -e.size.Y/2.0)
-	e.drawOptions.GeoM.Rotate(angle)
-	e.drawOptions.GeoM.Translate(e.pos.X, e.pos.Y)
+	// Update animation
+	e.curAnim.Update(time.Millisecond * animDeltaTime)
+	e.drawOptions.X = pos.X
+	e.drawOptions.Y = pos.Y
+	e.drawOptions.Rotate = e.body.Angle()
 }
 
 func (e *enemy) draw(dst *ebiten.Image) {
-	dst.DrawImage(enemyImage, &e.drawOptions)
+	e.curAnim.Draw(dst, &e.drawOptions)
 }
 
 func enemyUpdateVelocity(body *cp.Body, gravity cp.Vector, damping, dt float64) {
