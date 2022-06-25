@@ -4,6 +4,7 @@ package main
 
 import (
 	"math"
+	"math/rand"
 	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -18,7 +19,7 @@ const (
 	enemyWidthTile         = 1
 	enemyHeightTile        = 1.5
 	enemyEyeRange          = cameraWidth
-	enemyEyeRadius         = cameraHeight / 2.0
+	enemyEyeRadius         = cameraHeight / 4.0
 	enemyAttackCooldownSec = 2.0
 )
 
@@ -27,12 +28,13 @@ type enemy struct {
 	drawOptions       ganim8.DrawOptions
 	body              *cp.Body
 	shape             *cp.Shape
-	curAnim           *ganim8.Animation
+	curAnim           ganim8.Animation
 	eyeRay            [2]cp.Vector
 	attackCooldownSec float32
+	turnedLeft        bool
 }
 
-func newEnemy(pos cp.Vector, space *cp.Space) *enemy {
+func newEnemy(pos cp.Vector, space *cp.Space, turnedLeft bool) *enemy {
 	enemy := &enemy{
 		size: cp.Vector{
 			X: enemyWidthTile * tileLength,
@@ -43,9 +45,15 @@ func newEnemy(pos cp.Vector, space *cp.Space) *enemy {
 			ScaleX:  1.00,
 			ScaleY:  1.00,
 		},
-		curAnim:           animEnemy1Idle,
+		curAnim:           *animEnemy1Idle,
 		attackCooldownSec: 0,
+		turnedLeft:        turnedLeft,
 	}
+	if turnedLeft {
+		enemy.drawOptions.ScaleX = -1.0
+	}
+
+	enemy.curAnim.GoToFrame(rand.Intn(4)) // Have all enemies start at different frames
 
 	body := cp.NewBody(enemyMass, enemyMoment)
 	body.SetPosition(cp.Vector{X: pos.X, Y: pos.Y})
@@ -72,10 +80,15 @@ func (e *enemy) update(force *cp.Vector) {
 	}
 
 	// Raycast
+	angle := e.body.Angle()
+	turnMult := 1.0
+	if e.turnedLeft {
+		turnMult = -1.0
+	}
 	e.eyeRay[0] = pos
 	e.eyeRay[1] = e.eyeRay[0].Add(
 		cp.Vector{
-			X: enemyEyeRange, Y: 0,
+			X: enemyEyeRange * turnMult * math.Cos(angle), Y: enemyEyeRange * math.Sin(angle),
 		},
 	)
 
@@ -85,12 +98,6 @@ func (e *enemy) update(force *cp.Vector) {
 	e.drawOptions.Y = pos.Y
 	e.drawOptions.Rotate = e.body.Angle()
 }
-
-// func (e *enemy) attack(playerPos cp.Vector) {
-// 	if e.attackCooldownSec <= 0 {
-// 		rockManager.rockets = append(rockManager.rockets, )
-// 	}
-// }
 
 func (e *enemy) draw(dst *ebiten.Image) {
 	e.curAnim.Draw(dst, &e.drawOptions)

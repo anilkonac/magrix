@@ -14,7 +14,8 @@ import (
 
 const (
 	gridWidth, gridHeight   = 16, 32
-	durationEnemy1IdleMs    = 200
+	durationEnemy1IdleMs    = 150
+	durationPlayerIdleMs    = 200
 	durationPlayerWalkingMs = 75
 	durationExplosionMs     = 50
 	numFramesExplosion      = 14
@@ -46,7 +47,7 @@ var (
 )
 
 func init() {
-	animPlayerIdle = newAnim("1-4", 1, bytesPlayerIdle, gridWidth, gridHeight, 64, 32, durationEnemy1IdleMs)
+	animPlayerIdle = newAnim("1-4", 1, bytesPlayerIdle, gridWidth, gridHeight, 64, 32, durationPlayerIdleMs)
 	animPlayerWalk = newAnim("1-8", 1, bytesPlayerWalk, gridWidth, gridHeight, 128, 32, durationPlayerWalkingMs)
 	animEnemy1Idle = newAnim("1-4", 1, byteseEemy1Idle, gridWidth, gridHeight, 64, 32, durationEnemy1IdleMs)
 	animRocket = newAnim("1-2", 1, bytesRocket, 16, 16, 32, 16, 50)

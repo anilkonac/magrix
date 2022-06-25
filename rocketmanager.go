@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	rocketMass               = 1e-10
+	rocketMass               = 0.1
 	rocketMoment             = 100
 	rocketVelocity           = 120
 	rocketWidth              = 8
@@ -38,15 +38,21 @@ func newExplosion(pos cp.Vector) *explosion {
 type rocket struct {
 	body        *cp.Body
 	shape       *cp.Shape
-	target      cp.Vector
 	drawOptions ganim8.DrawOptions
 }
 
-func newRocket(startPos, target cp.Vector, angle float64, space *cp.Space) *rocket {
+func newRocket(startPos cp.Vector, angle float64, space *cp.Space) *rocket {
 	body := cp.NewBody(rocketMass, rocketMoment)
 	body.SetPosition(startPos)
 	body.SetVelocityUpdateFunc(rocketUpdateVelocity)
-	body.SetVelocity(rocketVelocity, 0)
+	body.SetAngle(angle)
+	velMult := 1.0
+	scaleX := 1.0
+	if angle <= -halfPi || angle >= halfPi {
+		velMult = -1.0
+		scaleX = -1.0
+	}
+	body.SetVelocity(rocketVelocity*velMult, 0)
 	// body.Set
 
 	shape := cp.NewBox(body, rocketWidth, rocketHeight, 0)
@@ -58,13 +64,13 @@ func newRocket(startPos, target cp.Vector, angle float64, space *cp.Space) *rock
 	drawOpts := ganim8.DrawOptions{
 		X:       startPos.X,
 		Y:       startPos.Y,
-		ScaleX:  1.0,
+		ScaleX:  scaleX,
 		ScaleY:  1.0,
 		OriginX: 0.5,
 		OriginY: 0.5,
 	}
 
-	return &rocket{body, shape, target, drawOpts}
+	return &rocket{body, shape, drawOpts}
 }
 
 type rocketManager struct {
@@ -72,8 +78,9 @@ type rocketManager struct {
 	explosions []*explosion
 }
 
-func (m *rocketManager) update() (hitBodies []*cp.Body) {
+func (m *rocketManager) update( /*playerPos *cp.Vector*/ ) (hitBodies []*cp.Body) {
 	animRocket.Update(animDeltaTime)
+
 	rocketsToBeDeleted := make([]*rocket, 0, 8)
 	for _, rocket := range m.rockets {
 		var rocketHit bool
@@ -103,9 +110,9 @@ func (m *rocketManager) update() (hitBodies []*cp.Body) {
 		rocket.drawOptions.X = pos.X
 		rocket.drawOptions.Y = pos.Y
 
-		// Update velocity
-		vel := rocket.body.Velocity()
-		rocket.body.SetVelocity(vel.X, 0)
+		// Eliminate gravity
+		// velocityPercent := rocket.body.Velocity().Length() / rocketVelocity // To eliminate floating stopped rockets
+		rocket.body.SetForce(cp.Vector{X: 0, Y: -gravity * rocketMass /* * velocityPercent*/})
 	}
 
 	// // TODO: Object pooling?
@@ -130,7 +137,7 @@ func (m *rocketManager) update() (hitBodies []*cp.Body) {
 		}
 	}
 
-	// Delet ended explosion animation
+	// Delete ended explosion animation
 	for iExplo, explo := range m.explosions {
 		for _, exploTarget := range explosionsToBeDeleted {
 			if explo == exploTarget {

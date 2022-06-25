@@ -3,7 +3,6 @@
 package main
 
 import (
-	"fmt"
 	"image/color"
 	"log"
 	"math"
@@ -149,7 +148,7 @@ func (g *game) loadMap(gameMap *tiled.Map) {
 	)
 	// Add enemies
 	for _, enemyPos := range gameMap.ObjectGroups[objectGroupEnemy].Objects {
-		g.enemies = append(g.enemies, newEnemy(cp.Vector{X: enemyPos.X, Y: enemyPos.Y}, g.space))
+		g.enemies = append(g.enemies, newEnemy(cp.Vector{X: enemyPos.X, Y: enemyPos.Y}, g.space, enemyPos.Properties.GetBool("turnedLeft")))
 
 	}
 
@@ -262,16 +261,33 @@ func (g *game) rayCast() {
 		}
 	}
 
+	// Check rockets
+	for _, rocket := range g.enemies {
+		success = rocket.shape.SegmentQuery(gunRay[0], gunRay[1], 0, &info)
+		if success && info.Alpha < g.rayHitInfo.Alpha {
+			g.rayHitInfo = info
+		}
+	}
+
 	// Check player
+	// for enemy to detect player
 	for _, enemy := range g.enemies {
 		success = g.player.shape.SegmentQuery(enemy.eyeRay[0], enemy.eyeRay[1], enemyEyeRadius, &info)
 		if success && enemy.attackCooldownSec <= 0 {
-			g.rocketManager.rockets = append(g.rocketManager.rockets,
-				newRocket(
-					enemy.body.Position().Add(cp.Vector{X: tileLength, Y: -tileLength / 2.0}),
-					g.player.pos, 0, g.space,
-				),
-			)
+			var rocketSpawnPos cp.Vector
+			var rocketAngle float64
+			if enemyPos := enemy.body.Position(); enemy.turnedLeft {
+				rocketSpawnPos = enemyPos.Add(cp.Vector{
+					X: -tileLength, Y: -tileLength / 2.0,
+				})
+				rocketAngle = -halfPi
+			} else {
+				rocketSpawnPos = enemyPos.Add(cp.Vector{
+					X: tileLength, Y: -tileLength / 2.0,
+				})
+			}
+			g.rocketManager.rockets = append(g.rocketManager.rockets, newRocket(
+				rocketSpawnPos, rocketAngle, g.space))
 			enemy.attackCooldownSec = enemyAttackCooldownSec
 		} else {
 			enemy.attackCooldownSec -= deltaTimeSec
@@ -318,7 +334,7 @@ func (g *game) Draw(screen *ebiten.Image) {
 	screen.DrawImage(imageHit, &drawOptionsRayHit)
 
 	// Print fps
-	ebitenutil.DebugPrint(screen, fmt.Sprintf("TPS: %.2f  FPS: %.2f", ebiten.CurrentTPS(), ebiten.CurrentFPS()))
+	// ebitenutil.DebugPrint(screen, fmt.Sprintf("TPS: %.2f  FPS: %.2f", ebiten.CurrentTPS(), ebiten.CurrentFPS()))
 	// ebitenutil.DebugPrintAt(screen, fmt.Sprintf("X: %.0f, Y: %.0f", g.input.cursorPos.X, g.input.cursorPos.Y), 0, 15)
 }
 

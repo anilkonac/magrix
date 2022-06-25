@@ -189,7 +189,7 @@ func (p *player) update(input *input, rayHitInfo *cp.SegmentQueryInfo) {
 }
 
 func (p *player) checkOnGround() {
-	const groundNormalYThreshold = 0.5
+	const groundNormalYThreshold = 0.8
 	// Grab the grounding normal from last frame - Taken from cp-examples/player and modified
 	groundNormal := cp.Vector{}
 	p.body.EachArbiter(func(arb *cp.Arbiter) {
@@ -251,6 +251,7 @@ func (p *player) handleInputs(input *input, rayHitInfo *cp.SegmentQueryInfo) {
 	}
 	// v := p.body.Velocity()
 	// fmt.Printf("Velocity X: %.2f\tY: %.2f\t\tForce X: %.2f\tY:%.2f\n", v.X, v.Y, p.gunForce.X, p.gunForce.Y)
+	// fmt.Printf("Force X:%.2f\tY:%.2f\n", p.gunForce.X, p.gunForce.Y)
 }
 
 func (p *player) updateGeometryMatrices() {
