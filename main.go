@@ -268,7 +268,7 @@ func (g *game) rayCast() {
 		if success && enemy.attackCooldownSec <= 0 {
 			g.rocketManager.rockets = append(g.rocketManager.rockets,
 				newRocket(
-					enemy.body.Position().Add(cp.Vector{tileLength, -tileLength / 2.0}),
+					enemy.body.Position().Add(cp.Vector{X: tileLength, Y: -tileLength / 2.0}),
 					g.player.pos, 0, g.space,
 				),
 			)

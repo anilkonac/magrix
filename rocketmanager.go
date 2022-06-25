@@ -76,22 +76,27 @@ func (m *rocketManager) update() (hitBodies []*cp.Body) {
 	animRocket.Update(animDeltaTime)
 	rocketsToBeDeleted := make([]int, 0, 8)
 	for iRocket, rocket := range m.rockets {
+		var rocketHit bool
+		var hitBody *cp.Body
 		rocket.body.EachArbiter(func(arb *cp.Arbiter) {
 			if arb.IsFirstContact() {
 				bodyA, bodyB := arb.Bodies()
 				if bodyA != rocket.body {
-					hitBodies = append(hitBodies, bodyA)
+					hitBody = bodyA
 				} else {
-					hitBodies = append(hitBodies, bodyB)
+					hitBody = bodyB
 				}
-
-				m.explosions = append(m.explosions, newExplosion(rocket.body.Position()))
-
-				// Mark this rocket to be deleted
-				rocketsToBeDeleted = append(rocketsToBeDeleted, iRocket)
+				rocketHit = true
 			}
 
 		})
+
+		if rocketHit {
+			m.explosions = append(m.explosions, newExplosion(rocket.body.Position()))
+			hitBodies = append(hitBodies, hitBody)
+			rocketsToBeDeleted = append(rocketsToBeDeleted, iRocket)
+			continue
+		}
 
 		// Update position
 		pos := rocket.body.Position()
@@ -106,10 +111,17 @@ func (m *rocketManager) update() (hitBodies []*cp.Body) {
 	// TODO: Object pooling?
 	// Delete hit rockets
 	for _, rocketIndex := range rocketsToBeDeleted {
-		// Repeat error: slice bounds out of range
-		copy(m.rockets[rocketIndex:], m.rockets[rocketIndex+1:])
-		m.rockets[len(m.rockets)-1] = nil // or the zero value of T
-		m.rockets = m.rockets[:len(m.rockets)-1]
+		if len(m.rockets) == 1 {
+			m.rockets[0] = nil
+			m.rockets = make([]*rocket, 0)
+		} else if len(m.rockets) == 0 {
+			break
+		} else {
+			copy(m.rockets[rocketIndex:], m.rockets[rocketIndex+1:])
+			m.rockets[len(m.rockets)-1] = nil // or the zero value of T
+			m.rockets = m.rockets[:len(m.rockets)-1]
+		}
+
 	}
 
 	// Update explosions
@@ -125,7 +137,7 @@ func (m *rocketManager) update() (hitBodies []*cp.Body) {
 	// Delete ended explosions
 	for _, explIndex := range explosionsToBeDeleted {
 		copy(m.explosions[explIndex:], m.explosions[explIndex+1:])
-		m.explosions[len(m.explosions)-1] = nil // or the zero value of T
+		m.explosions[len(m.explosions)-1] = nil
 		m.explosions = m.explosions[:len(m.explosions)-1]
 	}
 
