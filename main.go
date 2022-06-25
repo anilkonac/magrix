@@ -3,6 +3,7 @@
 package main
 
 import (
+	"fmt"
 	"image/color"
 	"log"
 	"math"
@@ -206,7 +207,7 @@ func (g *game) Update() error {
 	// Update player and player's gun
 	g.player.update(&g.input, &g.rayHitInfo)
 
-	// Send negation of the player's gun force to the enemy
+	// Send the negative of the player's gun force to the rocket
 	var force cp.Vector
 	for _, enemy := range g.enemies {
 		if g.rayHitInfo.Shape == enemy.shape {
@@ -214,6 +215,15 @@ func (g *game) Update() error {
 			enemy.update(&force)
 		} else {
 			enemy.update(nil)
+		}
+	}
+	// Send the negative of the player's gun force to the rocket
+	if g.input.attract || g.input.repel {
+		for _, rocket := range g.rocketManager.rockets {
+			if g.rayHitInfo.Shape == rocket.shape {
+				force = g.player.gunForce.Neg()
+				rocket.body.SetForce(force)
+			}
 		}
 	}
 
@@ -262,7 +272,7 @@ func (g *game) rayCast() {
 	}
 
 	// Check rockets
-	for _, rocket := range g.enemies {
+	for _, rocket := range g.rocketManager.rockets {
 		success = rocket.shape.SegmentQuery(gunRay[0], gunRay[1], 0, &info)
 		if success && info.Alpha < g.rayHitInfo.Alpha {
 			g.rayHitInfo = info
@@ -280,7 +290,7 @@ func (g *game) rayCast() {
 				rocketSpawnPos = enemyPos.Add(cp.Vector{
 					X: -tileLength, Y: -tileLength / 2.0,
 				})
-				rocketAngle = -halfPi
+				rocketAngle = -math.Pi
 			} else {
 				rocketSpawnPos = enemyPos.Add(cp.Vector{
 					X: tileLength, Y: -tileLength / 2.0,
@@ -334,7 +344,7 @@ func (g *game) Draw(screen *ebiten.Image) {
 	screen.DrawImage(imageHit, &drawOptionsRayHit)
 
 	// Print fps
-	// ebitenutil.DebugPrint(screen, fmt.Sprintf("TPS: %.2f  FPS: %.2f", ebiten.CurrentTPS(), ebiten.CurrentFPS()))
+	ebitenutil.DebugPrint(screen, fmt.Sprintf("TPS: %.2f  FPS: %.2f", ebiten.CurrentTPS(), ebiten.CurrentFPS()))
 	// ebitenutil.DebugPrintAt(screen, fmt.Sprintf("X: %.0f, Y: %.0f", g.input.cursorPos.X, g.input.cursorPos.Y), 0, 15)
 }
 

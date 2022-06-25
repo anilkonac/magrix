@@ -1,14 +1,16 @@
 package main
 
 import (
+	"math"
+
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/jakecoffman/cp"
 	"github.com/yohamta/ganim8/v2"
 )
 
 const (
-	rocketMass               = 0.1
-	rocketMoment             = 100
+	rocketMass               = 0.25
+	rocketMoment             = 10
 	rocketVelocity           = 120
 	rocketWidth              = 8
 	rocketHeight             = 2
@@ -46,17 +48,10 @@ func newRocket(startPos cp.Vector, angle float64, space *cp.Space) *rocket {
 	body.SetPosition(startPos)
 	body.SetVelocityUpdateFunc(rocketUpdateVelocity)
 	body.SetAngle(angle)
-	velMult := 1.0
-	scaleX := 1.0
-	if angle <= -halfPi || angle >= halfPi {
-		velMult = -1.0
-		scaleX = -1.0
-	}
-	body.SetVelocity(rocketVelocity*velMult, 0)
-	// body.Set
+	body.SetVelocity(rocketVelocity*math.Cos(angle), 0)
 
 	shape := cp.NewBox(body, rocketWidth, rocketHeight, 0)
-	// TODO: Set elastic and frict ?
+	// TODO: Set elasticity and friction ?
 
 	space.AddBody(body)
 	space.AddShape(shape)
@@ -64,7 +59,7 @@ func newRocket(startPos cp.Vector, angle float64, space *cp.Space) *rocket {
 	drawOpts := ganim8.DrawOptions{
 		X:       startPos.X,
 		Y:       startPos.Y,
-		ScaleX:  scaleX,
+		ScaleX:  1.0,
 		ScaleY:  1.0,
 		OriginX: 0.5,
 		OriginY: 0.5,
@@ -109,6 +104,9 @@ func (m *rocketManager) update( /*playerPos *cp.Vector*/ ) (hitBodies []*cp.Body
 		pos := rocket.body.Position()
 		rocket.drawOptions.X = pos.X
 		rocket.drawOptions.Y = pos.Y
+
+		// Update angle
+		rocket.drawOptions.Rotate = rocket.body.Angle()
 
 		// Eliminate gravity
 		// velocityPercent := rocket.body.Velocity().Length() / rocketVelocity // To eliminate floating stopped rockets
