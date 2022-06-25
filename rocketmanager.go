@@ -74,8 +74,8 @@ type rocketManager struct {
 
 func (m *rocketManager) update() (hitBodies []*cp.Body) {
 	animRocket.Update(animDeltaTime)
-	rocketsToBeDeleted := make([]int, 0, 8)
-	for iRocket, rocket := range m.rockets {
+	rocketsToBeDeleted := make([]*rocket, 0, 8)
+	for _, rocket := range m.rockets {
 		var rocketHit bool
 		var hitBody *cp.Body
 		rocket.body.EachArbiter(func(arb *cp.Arbiter) {
@@ -94,7 +94,7 @@ func (m *rocketManager) update() (hitBodies []*cp.Body) {
 		if rocketHit {
 			m.explosions = append(m.explosions, newExplosion(rocket.body.Position()))
 			hitBodies = append(hitBodies, hitBody)
-			rocketsToBeDeleted = append(rocketsToBeDeleted, iRocket)
+			rocketsToBeDeleted = append(rocketsToBeDeleted, rocket)
 			continue
 		}
 
@@ -108,37 +108,38 @@ func (m *rocketManager) update() (hitBodies []*cp.Body) {
 		rocket.body.SetVelocity(vel.X, 0)
 	}
 
-	// TODO: Object pooling?
-	// Delete hit rockets
-	for _, rocketIndex := range rocketsToBeDeleted {
-		if len(m.rockets) == 1 {
-			m.rockets[0] = nil
-			m.rockets = make([]*rocket, 0)
-		} else if len(m.rockets) == 0 {
-			break
-		} else {
-			copy(m.rockets[rocketIndex:], m.rockets[rocketIndex+1:])
-			m.rockets[len(m.rockets)-1] = nil // or the zero value of T
-			m.rockets = m.rockets[:len(m.rockets)-1]
+	// // TODO: Object pooling?
+	// // Delete hit rockets
+	for iRocket, rocket := range m.rockets {
+		for _, rocketTarget := range rocketsToBeDeleted {
+			if rocket == rocketTarget {
+				copy(m.rockets[iRocket:], m.rockets[iRocket+1:])
+				m.rockets[len(m.rockets)-1] = nil
+				m.rockets = m.rockets[:len(m.rockets)-1]
+			}
 		}
-
 	}
 
-	// Update explosions
-	explosionsToBeDeleted := make([]int, 0, 8)
-	for iAnim, explo := range m.explosions {
+	// Update explosion animations
+	explosionsToBeDeleted := make([]*explosion, 0, 8)
+	for _, explo := range m.explosions {
 		explo.animation.Update(animDeltaTime)
 		explo.elapsedMs += animDeltaTime.Milliseconds()
 		if explo.elapsedMs >= explosionTotalDurationMs {
-			explosionsToBeDeleted = append(explosionsToBeDeleted, iAnim)
+			explosionsToBeDeleted = append(explosionsToBeDeleted, explo)
 		}
 	}
 
-	// Delete ended explosions
-	for _, explIndex := range explosionsToBeDeleted {
-		copy(m.explosions[explIndex:], m.explosions[explIndex+1:])
-		m.explosions[len(m.explosions)-1] = nil
-		m.explosions = m.explosions[:len(m.explosions)-1]
+	// Delet ended explosion animation
+	for iExplo, explo := range m.explosions {
+		for _, exploTarget := range explosionsToBeDeleted {
+			if explo == exploTarget {
+				copy(m.explosions[iExplo:], m.explosions[iExplo+1:])
+				m.explosions[len(m.explosions)-1] = nil
+				m.explosions = m.explosions[:len(m.explosions)-1]
+			}
+		}
+
 	}
 
 	return
