@@ -12,19 +12,24 @@ import (
 )
 
 const (
-	enemyMass       = 0.75
-	enemyFriction   = 0.75
-	enemyMoment     = 50
-	enemyWidthTile  = 1
-	enemyHeightTile = 1.5
+	enemyMass              = 0.75
+	enemyFriction          = 0.75
+	enemyMoment            = 50
+	enemyWidthTile         = 1
+	enemyHeightTile        = 1.5
+	enemyEyeRange          = cameraWidth
+	enemyEyeRadius         = cameraHeight / 2.0
+	enemyAttackCooldownSec = 2.0
 )
 
 type enemy struct {
-	size        cp.Vector
-	drawOptions ganim8.DrawOptions
-	body        *cp.Body
-	shape       *cp.Shape
-	curAnim     *ganim8.Animation
+	size              cp.Vector
+	drawOptions       ganim8.DrawOptions
+	body              *cp.Body
+	shape             *cp.Shape
+	curAnim           *ganim8.Animation
+	eyeRay            [2]cp.Vector
+	attackCooldownSec float32
 }
 
 func newEnemy(pos cp.Vector, space *cp.Space) *enemy {
@@ -38,7 +43,8 @@ func newEnemy(pos cp.Vector, space *cp.Space) *enemy {
 			ScaleX:  1.00,
 			ScaleY:  1.00,
 		},
-		curAnim: animEnemy1Idle,
+		curAnim:           animEnemy1Idle,
+		attackCooldownSec: 0,
 	}
 
 	body := cp.NewBody(enemyMass, enemyMoment)
@@ -65,12 +71,26 @@ func (e *enemy) update(force *cp.Vector) {
 		e.body.SetForce(*force)
 	}
 
+	// Raycast
+	e.eyeRay[0] = pos
+	e.eyeRay[1] = e.eyeRay[0].Add(
+		cp.Vector{
+			X: enemyEyeRange, Y: 0,
+		},
+	)
+
 	// Update animation
 	e.curAnim.Update(time.Millisecond * animDeltaTime)
 	e.drawOptions.X = pos.X
 	e.drawOptions.Y = pos.Y
 	e.drawOptions.Rotate = e.body.Angle()
 }
+
+// func (e *enemy) attack(playerPos cp.Vector) {
+// 	if e.attackCooldownSec <= 0 {
+// 		rockManager.rockets = append(rockManager.rockets, )
+// 	}
+// }
 
 func (e *enemy) draw(dst *ebiten.Image) {
 	e.curAnim.Draw(dst, &e.drawOptions)

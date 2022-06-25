@@ -113,12 +113,13 @@ func initRayHitImages() {
 
 // game implements ebiten.game interface.
 type game struct {
-	player     player
-	enemies    []*enemy
-	walls      []*cp.Shape
-	space      *cp.Space
-	input      input
-	rayHitInfo cp.SegmentQueryInfo
+	player        player
+	enemies       []*enemy
+	walls         []*cp.Shape
+	space         *cp.Space
+	input         input
+	rayHitInfo    cp.SegmentQueryInfo
+	rocketManager rocketManager
 }
 
 func newGame() *game {
@@ -201,6 +202,7 @@ func (g *game) Update() error {
 	g.space.Step(deltaTime)
 
 	g.rayCast()
+	g.rocketManager.update()
 
 	// Update player and player's gun
 	g.player.update(&g.input, &g.rayHitInfo)
@@ -260,6 +262,23 @@ func (g *game) rayCast() {
 		}
 	}
 
+	// Check player
+	for _, enemy := range g.enemies {
+		success = g.player.shape.SegmentQuery(enemy.eyeRay[0], enemy.eyeRay[1], enemyEyeRadius, &info)
+		if success && enemy.attackCooldownSec <= 0 {
+			g.rocketManager.rockets = append(g.rocketManager.rockets,
+				newRocket(
+					enemy.body.Position().Add(cp.Vector{tileLength, 0}),
+					g.player.pos, 0, g.space,
+				),
+			)
+			enemy.attackCooldownSec = enemyAttackCooldownSec
+		} else {
+			enemy.attackCooldownSec -= deltaTime
+		}
+		fmt.Printf("success: %v\n", success)
+	}
+
 }
 
 // Draw is called every frame (typically 1/60[s] for 60Hz display).
@@ -277,6 +296,9 @@ func (g *game) Draw(screen *ebiten.Image) {
 	for _, enemy := range g.enemies {
 		enemy.draw(screen)
 	}
+
+	// Draw rockets
+	g.rocketManager.draw(screen)
 
 	// Draw walls and platforms
 	screen.DrawImage(imagePlatforms, &ebiten.DrawImageOptions{})
@@ -312,7 +334,7 @@ func main() {
 	ebiten.SetWindowTitle("Magrix")
 	// ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
 	// ebiten.SetFPSMode(ebiten.FPSModeVsyncOffMaximum)
-	ebiten.SetCursorMode(ebiten.CursorModeCaptured)
+	// ebiten.SetCursorMode(ebiten.CursorModeCaptured)
 
 	if err := ebiten.RunGame(newGame()); err != nil {
 		log.Fatal(err)
