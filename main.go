@@ -20,7 +20,7 @@ const (
 	cameraHeight = 240
 	screenWidth  = 960
 	screenHeight = 720
-	deltaTime    = 1.0 / 60.0
+	deltaTimeSec = 1.0 / 60.0
 )
 
 const (
@@ -199,7 +199,7 @@ func (g *game) Update() error {
 		return nil
 	}
 
-	g.space.Step(deltaTime)
+	g.space.Step(deltaTimeSec)
 
 	g.rayCast()
 	g.rocketManager.update()
@@ -268,13 +268,13 @@ func (g *game) rayCast() {
 		if success && enemy.attackCooldownSec <= 0 {
 			g.rocketManager.rockets = append(g.rocketManager.rockets,
 				newRocket(
-					enemy.body.Position().Add(cp.Vector{tileLength, 0}),
+					enemy.body.Position().Add(cp.Vector{tileLength, -tileLength / 2.0}),
 					g.player.pos, 0, g.space,
 				),
 			)
 			enemy.attackCooldownSec = enemyAttackCooldownSec
 		} else {
-			enemy.attackCooldownSec -= deltaTime
+			enemy.attackCooldownSec -= deltaTimeSec
 		}
 		// fmt.Printf("success: %v\n", success)
 	}
@@ -334,7 +334,7 @@ func main() {
 	ebiten.SetWindowTitle("Magrix")
 	// ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
 	// ebiten.SetFPSMode(ebiten.FPSModeVsyncOffMaximum)
-	// ebiten.SetCursorMode(ebiten.CursorModeCaptured)
+	ebiten.SetCursorMode(ebiten.CursorModeCaptured)
 
 	if err := ebiten.RunGame(newGame()); err != nil {
 		log.Fatal(err)

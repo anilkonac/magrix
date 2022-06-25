@@ -227,7 +227,7 @@ func (p *player) handleInputs(input *input, rayHitInfo *cp.SegmentQueryInfo) {
 	// Apply air control if not on ground
 	if !p.onGround {
 		v := p.body.Velocity()
-		newVelX := cp.Clamp(v.X-surfaceV.X*deltaTime, -playerVelocity, playerVelocity)
+		newVelX := cp.Clamp(v.X-surfaceV.X*deltaTimeSec, -playerVelocity, playerVelocity)
 		p.body.SetVelocity(newVelX, v.Y)
 		p.state = stateJumping
 	}

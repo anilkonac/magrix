@@ -1,20 +1,39 @@
 package main
 
 import (
-	"fmt"
-
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/jakecoffman/cp"
 	"github.com/yohamta/ganim8/v2"
 )
 
 const (
-	rocketMass     = 1e-10
-	rocketMoment   = 100
-	rocketVelocity = 60
-	rocketWidth    = 8
-	rocketHeight   = 2
+	rocketMass               = 1e-10
+	rocketMoment             = 100
+	rocketVelocity           = 120
+	rocketWidth              = 8
+	rocketHeight             = 2
+	explosionTotalDurationMs = durationExplosionMs * 14
 )
+
+type explosion struct {
+	drawOptions ganim8.DrawOptions
+	elapsedMs   int64
+	animation   ganim8.Animation
+}
+
+func newExplosion(pos cp.Vector) *explosion {
+	return &explosion{
+		drawOptions: ganim8.DrawOptions{
+			X:       pos.X,
+			Y:       pos.Y,
+			ScaleX:  1.0,
+			ScaleY:  1.0,
+			OriginX: 0.5,
+			OriginY: 0.5,
+		},
+		animation: *animExplosion,
+	}
+}
 
 type rocket struct {
 	body        *cp.Body
@@ -49,7 +68,8 @@ func newRocket(startPos, target cp.Vector, angle float64, space *cp.Space) *rock
 }
 
 type rocketManager struct {
-	rockets []*rocket
+	rockets    []*rocket
+	explosions []*explosion
 }
 
 func (m *rocketManager) update() (hitBodies []*cp.Body) {
@@ -57,13 +77,7 @@ func (m *rocketManager) update() (hitBodies []*cp.Body) {
 	rocketsToBeDeleted := make([]int, 0, 8)
 	for iRocket, rocket := range m.rockets {
 		rocket.body.EachArbiter(func(arb *cp.Arbiter) {
-			// count := arb.Count()
-			// count := arb.ContactPointSet().Count
-			// fmt.Printf("count: %v\n", count)
-			hasHit := arb.IsFirstContact()
-			// contactPointSet := arb.ContactPointSet()
-			fmt.Printf("hasHit: %v\n", hasHit)
-			if hasHit {
+			if arb.IsFirstContact() {
 				bodyA, bodyB := arb.Bodies()
 				if bodyA != rocket.body {
 					hitBodies = append(hitBodies, bodyA)
@@ -71,12 +85,12 @@ func (m *rocketManager) update() (hitBodies []*cp.Body) {
 					hitBodies = append(hitBodies, bodyB)
 				}
 
+				m.explosions = append(m.explosions, newExplosion(rocket.body.Position()))
+
 				// Mark this rocket to be deleted
 				rocketsToBeDeleted = append(rocketsToBeDeleted, iRocket)
 			}
 
-			// animExplosion
-			// m.explosions = append(m.explosions, newExplosion(arb.))
 		})
 
 		// Update position
@@ -98,12 +112,36 @@ func (m *rocketManager) update() (hitBodies []*cp.Body) {
 		m.rockets = m.rockets[:len(m.rockets)-1]
 	}
 
+	// Update explosions
+	explosionsToBeDeleted := make([]int, 0, 8)
+	for iAnim, explo := range m.explosions {
+		explo.animation.Update(animDeltaTime)
+		explo.elapsedMs += animDeltaTime.Milliseconds()
+		if explo.elapsedMs >= explosionTotalDurationMs {
+			explosionsToBeDeleted = append(explosionsToBeDeleted, iAnim)
+		}
+	}
+
+	// Delete ended explosions
+	for _, explIndex := range explosionsToBeDeleted {
+		copy(m.explosions[explIndex:], m.explosions[explIndex+1:])
+		m.explosions[len(m.explosions)-1] = nil // or the zero value of T
+		m.explosions = m.explosions[:len(m.explosions)-1]
+	}
+
 	return
 }
 
 func (m *rocketManager) draw(dst *ebiten.Image) {
+	// Draw rockets
 	for _, rocket := range m.rockets {
 		animRocket.Draw(dst, &rocket.drawOptions)
+	}
+
+	// Draw explosions
+	for _, explo := range m.explosions {
+		explo.animation.Draw(dst, &explo.drawOptions)
+
 	}
 }
 
