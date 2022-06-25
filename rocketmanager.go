@@ -71,6 +71,7 @@ func newRocket(startPos cp.Vector, angle float64, space *cp.Space) *rocket {
 type rocketManager struct {
 	rockets    []*rocket
 	explosions []*explosion
+	space      *cp.Space
 }
 
 func (m *rocketManager) update( /*playerPos *cp.Vector*/ ) (hitBodies []*cp.Body) {
@@ -118,9 +119,14 @@ func (m *rocketManager) update( /*playerPos *cp.Vector*/ ) (hitBodies []*cp.Body
 	for iRocket, rocket := range m.rockets {
 		for _, rocketTarget := range rocketsToBeDeleted {
 			if rocket == rocketTarget {
+				// Delete from slice
 				copy(m.rockets[iRocket:], m.rockets[iRocket+1:])
 				m.rockets[len(m.rockets)-1] = nil
 				m.rockets = m.rockets[:len(m.rockets)-1]
+
+				// Delete from space
+				m.space.RemoveShape(rocket.shape)
+				m.space.RemoveBody(rocket.body)
 			}
 		}
 	}

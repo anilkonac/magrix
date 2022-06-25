@@ -135,6 +135,9 @@ func newGame() *game {
 	game := &game{
 		player: *newPlayer(cp.Vector{X: cameraWidth / 2.0, Y: cameraHeight / 2.0}, space),
 		space:  space,
+		rocketManager: rocketManager{
+			space: space,
+		},
 	}
 
 	game.loadMap(gameMap)

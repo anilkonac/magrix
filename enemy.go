@@ -5,7 +5,6 @@ package main
 import (
 	"math"
 	"math/rand"
-	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/jakecoffman/cp"
@@ -67,7 +66,7 @@ func newEnemy(pos cp.Vector, space *cp.Space, turnedLeft bool) *enemy {
 	space.AddBody(enemy.body)
 	space.AddShape(enemy.shape)
 
-	go enemy.standUpBot()
+	// go enemy.standUpBot()
 
 	return enemy
 }
@@ -107,29 +106,30 @@ func enemyUpdateVelocity(body *cp.Body, gravity cp.Vector, damping, dt float64) 
 	body.UpdateVelocity(gravity, damping, dt)
 }
 
-// Goroutine
-func (e *enemy) standUpBot() {
-	const standUpForceY = -8000
-	const standUpAngularVelocity = -4
-	const checkIntervalSec = 3.0
-	const checkEpsilon = 1.0
+// Broken
+// // Goroutine
+// func (e *enemy) standUpBot() {
+// 	const standUpForceY = -8000
+// 	const standUpAngularVelocity = -4
+// 	const checkIntervalSec = 3.0
+// 	const checkEpsilon = 1.0
 
-	vForce := cp.Vector{X: 0, Y: standUpForceY}
+// 	vForce := cp.Vector{X: 0, Y: standUpForceY}
 
-	ticker := time.NewTicker(time.Second * checkIntervalSec)
-	for range ticker.C {
-		if gamePaused {
-			continue
-		}
-		angleDeg := e.body.Angle() * cp.DegreeConst
-		angleDegMod := math.Mod(angleDeg, 180)
+// 	ticker := time.NewTicker(time.Second * checkIntervalSec)
+// 	for range ticker.C {
+// 		if gamePaused {
+// 			continue
+// 		}
+// 		angleDeg := e.body.Angle() * cp.DegreeConst
+// 		angleDegMod := math.Mod(angleDeg, 180)
 
-		if math.Abs(angleDegMod-90) < checkEpsilon {
-			e.body.SetAngularVelocity(standUpAngularVelocity)
-			e.body.SetForce(vForce)
-		} else if math.Abs(angleDegMod+90) < checkEpsilon {
-			e.body.SetAngularVelocity(-standUpAngularVelocity)
-			e.body.SetForce(vForce)
-		}
-	}
-}
+// 		if math.Abs(angleDegMod-90) < checkEpsilon {
+// 			e.body.SetAngularVelocity(standUpAngularVelocity)
+// 			e.body.SetForce(vForce)
+// 		} else if math.Abs(angleDegMod+90) < checkEpsilon {
+// 			e.body.SetAngularVelocity(-standUpAngularVelocity)
+// 			e.body.SetForce(vForce)
+// 		}
+// 	}
+// }
