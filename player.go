@@ -75,6 +75,7 @@ var (
 	imageGunIdle    *ebiten.Image
 	imageGunAttract *ebiten.Image
 	imageGunRepel   *ebiten.Image
+	imagePlayer     *ebiten.Image
 )
 
 var posGunRelative cp.Vector
@@ -91,6 +92,8 @@ func init() {
 	img, err = png.Decode(bytes.NewReader(gunRepelBytes))
 	panicErr(err)
 	imageGunRepel = ebiten.NewImageFromImage(img)
+
+	imagePlayer = ebiten.NewImage(16, 32)
 }
 
 type player struct {
@@ -123,8 +126,8 @@ func newPlayer(pos cp.Vector, space *cp.Space) *player {
 			Y: gunHeightTile * tileLength,
 		},
 		drawOptions: ganim8.DrawOptions{
-			OriginX: 0.5,
-			OriginY: 0.6,
+			OriginX: 0.0,
+			OriginY: 0.1,
 			ScaleX:  1.0,
 			ScaleY:  1.0,
 		},
@@ -257,8 +260,8 @@ func (p *player) handleInputs(input *input, rayHitInfo *cp.SegmentQueryInfo) {
 
 func (p *player) updateGeometryMatrices() {
 	// Player
-	p.drawOptions.X = p.pos.X
-	p.drawOptions.Y = p.pos.Y
+	// p.drawOptions.X = p.pos.X
+	// p.drawOptions.Y = p.pos.Y
 	if p.angleGun < -halfPi /*-turnTolerance*/ || p.angleGun > halfPi /*+turnTolerance*/ {
 		p.drawOptions.ScaleX = -1.0
 		// } else if p.angleGun > -halfPi+turnTolerance || p.angleGun < halfPi-turnTolerance {
@@ -274,15 +277,20 @@ func (p *player) updateGeometryMatrices() {
 }
 
 func (p *player) draw(cam *camera.Camera) {
-	p.curAnim.Draw(dst, &p.drawOptions)
+	// p.curAnim.Draw(dst, &p.drawOptions)
+	imagePlayer.Clear()
+	p.curAnim.Draw(imagePlayer, &p.drawOptions)
+	// p.curAnim.Draw(cam.Surface, &p.drawOptions)
+
+	cam.Surface.DrawImage(imagePlayer, cam.GetTranslation(p.pos.X-tileLength/2.0, p.pos.Y-tileLength))
 
 	// Draw prototype gun
 	if p.stateGun == gunStateAttract {
-		dst.DrawImage(imageGunAttract, &p.drawOptionsGun)
+		// dst.DrawImage(imageGunAttract, &p.drawOptionsGun)
 	} else if p.stateGun == gunStateRepel {
-		dst.DrawImage(imageGunRepel, &p.drawOptionsGun)
+		// dst.DrawImage(imageGunRepel, &p.drawOptionsGun)
 	} else {
-		dst.DrawImage(imageGunIdle, &p.drawOptionsGun)
+		// dst.DrawImage(imageGunIdle, &p.drawOptionsGun)
 	}
 
 	// ebitenutil.DrawLine(dst, p.gunRay[0].X, p.gunRay[0].Y, p.gunRay[1].X, p.gunRay[1].Y, colorCrosshair)

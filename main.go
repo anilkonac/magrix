@@ -146,6 +146,8 @@ func newGame() *game {
 		},
 		cam: camera.NewCamera(screenWidth, screenHeight, 0, 0, 0, 1),
 	}
+	// game.cam.SetPosition(screenWidth/2.0, screenHeight/2.0)
+	game.cam.Zoom(2.0)
 
 	game.loadMap(gameMap)
 
@@ -220,8 +222,10 @@ func (g *game) addWalls(wallObjects []*tiled.Object) {
 // Update is called every tick (1/60 [s] by default).
 func (g *game) Update() error {
 	g.input.update()
-	drawOptionsCursor.GeoM.Reset()
-	drawOptionsCursor.GeoM.Translate(g.input.cursorPos.X-crosshairRadius, g.input.cursorPos.Y-crosshairRadius)
+	// drawOptionsCursor.GeoM.Reset()
+	// drawOptionsCursor.GeoM.Translate(g.input.cursorPos.X-crosshairRadius, g.input.cursorPos.Y-crosshairRadius)
+	cursorX, cursorY := g.cam.GetCursorCoords()
+	drawOptionsCursor = *g.cam.GetTranslation(cursorX-crosshairRadius, cursorY-crosshairRadius)
 
 	g.updateSettings()
 
@@ -259,6 +263,8 @@ func (g *game) Update() error {
 
 	// Update geometry matrices
 	const rayHitImageRadius = rayHitImageWidth / 2.0
+
+	g.cam.SetPosition(g.player.pos.X, g.player.pos.Y)
 
 	drawOptionsRayHit.GeoM.Reset()
 	drawOptionsRayHit.GeoM.Translate(g.rayHitInfo.Point.X-rayHitImageRadius, g.rayHitInfo.Point.Y-rayHitImageRadius)
@@ -342,19 +348,18 @@ var emptyDrawOptions ebiten.DrawImageOptions
 // Draw is called every frame (typically 1/60[s] for 60Hz display).
 func (g *game) Draw(screen *ebiten.Image) {
 	// screen.Fill(colorBackground)
+	g.cam.Surface.Fill(colorBackground)
 
 	// Draw decorations
 	// screen.DrawImage(imageDecorations, &emptyDrawOptions)
 	// screen.DrawImage(imageComputers, &emptyDrawOptions)
 	// screen.DrawImage(imageInteractables, &emptyDrawOptions)
+	g.cam.Surface.DrawImage(imageDecorations, g.cam.GetTranslation(0, 0))
+	g.cam.Surface.DrawImage(imageComputers, g.cam.GetTranslation(0, 0))
+	g.cam.Surface.DrawImage(imageInteractables, g.cam.GetTranslation(0, 0))
 
 	// Draw player and its gun
-	g.player.draw(screen)
-	g.cam.Surface.Clear()
-	g.cam.Surface.Fill(colorBackground)
-	g.cam.Surface.DrawImage(screen, g.cam.GetTranslation(g.player.pos.X, g.player.pos.Y))
-
-	g.cam.Blit(screen)
+	g.player.draw(g.cam)
 
 	// Draw enemies
 	// for _, enemy := range g.enemies {
@@ -366,20 +371,25 @@ func (g *game) Draw(screen *ebiten.Image) {
 
 	// Draw walls and platforms
 	// screen.DrawImage(imagePlatforms, &emptyDrawOptions)
+	g.cam.Surface.DrawImage(imagePlatforms, g.cam.GetTranslation(0, 0))
 
 	// Draw crosshair
 	// screen.DrawImage(imageCursor, &drawOptionsCursor)
+	// g.cam.Surface.DrawImage(imageCursor, &drawOptionsCursor)
+	g.cam.Surface.DrawImage(imageCursor, &drawOptionsCursor)
 
 	// Draw rayhit
-	var imageHit *ebiten.Image
-	if g.input.attract {
-		imageHit = imageRayHitAttract
-	} else if g.input.repel {
-		imageHit = imageRayHitRepel
-	} else {
-		imageHit = imageRayHit
-	}
-	screen.DrawImage(imageHit, &drawOptionsRayHit)
+	// var imageHit *ebiten.Image
+	// if g.input.attract {
+	// 	imageHit = imageRayHitAttract
+	// } else if g.input.repel {
+	// 	imageHit = imageRayHitRepel
+	// } else {
+	// 	imageHit = imageRayHit
+	// }
+	// screen.DrawImage(imageHit, &drawOptionsRayHit)
+
+	g.cam.Blit(screen)
 
 	// Print fps
 	ebitenutil.DebugPrint(screen, fmt.Sprintf("TPS: %.2f  FPS: %.2f", ebiten.CurrentTPS(), ebiten.CurrentFPS()))
@@ -398,7 +408,7 @@ func main() {
 	ebiten.SetWindowTitle("Magrix")
 	// ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
 	// ebiten.SetFPSMode(ebiten.FPSModeVsyncOffMaximum)
-	ebiten.SetCursorMode(ebiten.CursorModeCaptured)
+	// ebiten.SetCursorMode(ebiten.CursorModeCaptured)
 
 	if err := ebiten.RunGame(newGame()); err != nil {
 		log.Fatal(err)
