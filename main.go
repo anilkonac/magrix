@@ -18,8 +18,8 @@ import (
 )
 
 const (
-	cameraWidth  = 320
-	cameraHeight = 240
+	cameraWidth  = 960
+	cameraHeight = 720
 	screenWidth  = 960
 	screenHeight = 720
 	deltaTimeSec = 1.0 / 60.0
@@ -33,6 +33,8 @@ const (
 	wallFriction         = 1
 	// spaceIterations      = 10
 )
+
+const mapPath = "assets/gameMap.tmx"
 
 var (
 	colorBackground = color.RGBA{38, 38, 38, 255}
@@ -56,12 +58,11 @@ var (
 	tileLength         float64
 )
 
-const mapPath = "assets/testLevel.tmx"
-
 var (
-	imagePlatforms   *ebiten.Image
-	imageComputers   *ebiten.Image
-	imageDecorations *ebiten.Image
+	imagePlatforms     *ebiten.Image
+	imageInteractables *ebiten.Image
+	imageComputers     *ebiten.Image
+	imageDecorations   *ebiten.Image
 )
 
 var gamePaused bool
@@ -137,8 +138,7 @@ func newGame() *game {
 	tileLength = float64(gameMap.TileWidth)
 
 	game := &game{
-		player: *newPlayer(cp.Vector{X: cameraWidth / 2.0, Y: cameraHeight / 2.0}, space),
-		space:  space,
+		space: space,
 		rocketManager: rocketManager{
 			space: space,
 		},
@@ -151,34 +151,54 @@ func newGame() *game {
 
 func (g *game) loadMap(gameMap *tiled.Map) {
 	const (
-		objectGroupWalls = 0
-		objectGroupEnemy = 1
+		objectGroupWalls  = 0
+		objectGroupPlayer = 1
+		objectGroupEnemy  = 2
 	)
+
+	g.addWalls(gameMap.ObjectGroups[objectGroupWalls].Objects)
+
+	var playerStartLoc cp.Vector
+	playerStartLoc.X = gameMap.ObjectGroups[objectGroupPlayer].Objects[0].X
+	playerStartLoc.Y = gameMap.ObjectGroups[objectGroupPlayer].Objects[0].Y
+	g.player = *newPlayer(playerStartLoc, g.space)
+
 	// Add enemies
 	for _, enemyPos := range gameMap.ObjectGroups[objectGroupEnemy].Objects {
 		g.enemies = append(g.enemies, newEnemy(cp.Vector{X: enemyPos.X, Y: enemyPos.Y}, g.space, enemyPos.Properties.GetBool("turnedLeft")))
 
 	}
 
-	g.addWalls(gameMap.ObjectGroups[objectGroupWalls].Objects)
+	const (
+		layerPlatform      = 3
+		layerComputers     = 2
+		layerDecorations   = 0
+		layerInteractables = 1
+	)
 
 	// Render layer images
 	renderer, err := render.NewRenderer(gameMap)
 	panicErr(err)
 
-	err = renderer.RenderLayer(0)
+	err = renderer.RenderLayer(layerPlatform)
 	panicErr(err)
-	imageDecorations = ebiten.NewImageFromImage(renderer.Result)
+	imagePlatforms = ebiten.NewImageFromImage(renderer.Result)
 
 	renderer.Clear()
-	err = renderer.RenderLayer(1)
+	err = renderer.RenderLayer(layerInteractables)
+	panicErr(err)
+	imageInteractables = ebiten.NewImageFromImage(renderer.Result)
+
+	renderer.Clear()
+	err = renderer.RenderLayer(layerComputers)
 	panicErr(err)
 	imageComputers = ebiten.NewImageFromImage(renderer.Result)
 
 	renderer.Clear()
-	err = renderer.RenderLayer(2)
+	err = renderer.RenderLayer(layerDecorations)
 	panicErr(err)
-	imagePlatforms = ebiten.NewImageFromImage(renderer.Result)
+	imageDecorations = ebiten.NewImageFromImage(renderer.Result)
+
 }
 
 func (g *game) addWalls(wallObjects []*tiled.Object) {
@@ -314,13 +334,16 @@ func (g *game) rayCast() {
 
 }
 
+var emptyDrawOptions ebiten.DrawImageOptions
+
 // Draw is called every frame (typically 1/60[s] for 60Hz display).
 func (g *game) Draw(screen *ebiten.Image) {
 	screen.Fill(colorBackground)
 
 	// Draw decorations
-	screen.DrawImage(imageDecorations, &ebiten.DrawImageOptions{})
-	screen.DrawImage(imageComputers, &ebiten.DrawImageOptions{})
+	screen.DrawImage(imageDecorations, &emptyDrawOptions)
+	screen.DrawImage(imageComputers, &emptyDrawOptions)
+	screen.DrawImage(imageInteractables, &emptyDrawOptions)
 
 	// Draw player and its gun
 	g.player.draw(screen)
@@ -334,7 +357,7 @@ func (g *game) Draw(screen *ebiten.Image) {
 	g.rocketManager.draw(screen)
 
 	// Draw walls and platforms
-	screen.DrawImage(imagePlatforms, &ebiten.DrawImageOptions{})
+	screen.DrawImage(imagePlatforms, &emptyDrawOptions)
 
 	// Draw crosshair
 	screen.DrawImage(imageCursor, &drawOptionsCursor)
