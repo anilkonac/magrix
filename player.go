@@ -6,7 +6,6 @@ import (
 	"bytes"
 	"image/png"
 	"math"
-	"time"
 
 	_ "embed"
 
@@ -183,14 +182,14 @@ func (p *player) update(input *input, rayHitInfo *cp.SegmentQueryInfo) {
 
 	// v := p.body.Velocity()
 	// fmt.Printf("Friction: %.2f\tVel X: %.2f\tVel Y: %.2f\n", p.shape.Friction(), v.X, v.Y)
-	p.curAnim.Update(time.Millisecond * animDeltaTime)
+	p.curAnim.Update(animDeltaTime)
 	p.updateGeometryMatrices()
 
 	// fmt.Printf("p.angleGun: %v\n", p.angleGun)
 }
 
 func (p *player) checkOnGround() {
-	const groundNormalYThreshold = 0.5
+	const groundNormalYThreshold = 0.8
 	// Grab the grounding normal from last frame - Taken from cp-examples/player and modified
 	groundNormal := cp.Vector{}
 	p.body.EachArbiter(func(arb *cp.Arbiter) {
@@ -228,7 +227,7 @@ func (p *player) handleInputs(input *input, rayHitInfo *cp.SegmentQueryInfo) {
 	// Apply air control if not on ground
 	if !p.onGround {
 		v := p.body.Velocity()
-		newVelX := cp.Clamp(v.X-surfaceV.X*deltaTime, -playerVelocity, playerVelocity)
+		newVelX := cp.Clamp(v.X-surfaceV.X*deltaTimeSec, -playerVelocity, playerVelocity)
 		p.body.SetVelocity(newVelX, v.Y)
 		p.state = stateJumping
 	}
@@ -252,6 +251,7 @@ func (p *player) handleInputs(input *input, rayHitInfo *cp.SegmentQueryInfo) {
 	}
 	// v := p.body.Velocity()
 	// fmt.Printf("Velocity X: %.2f\tY: %.2f\t\tForce X: %.2f\tY:%.2f\n", v.X, v.Y, p.gunForce.X, p.gunForce.Y)
+	// fmt.Printf("Force X:%.2f\tY:%.2f\n", p.gunForce.X, p.gunForce.Y)
 }
 
 func (p *player) updateGeometryMatrices() {

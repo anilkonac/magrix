@@ -8,6 +8,8 @@ import (
 	"log"
 	"math"
 
+	_ "embed"
+
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/jakecoffman/cp"
@@ -20,7 +22,7 @@ const (
 	cameraHeight = 240
 	screenWidth  = 960
 	screenHeight = 720
-	deltaTime    = 1.0 / 60.0
+	deltaTimeSec = 1.0 / 60.0
 )
 
 const (
@@ -43,6 +45,8 @@ var (
 )
 
 var (
+	//go:embed circle.go
+	bytesCircleShader  []byte
 	imageCursor        = ebiten.NewImage(crosshairRadius*2, crosshairRadius*2)
 	imageRayHit        = ebiten.NewImage(rayHitImageWidth, rayHitImageWidth)
 	imageRayHitAttract = ebiten.NewImage(rayHitImageWidth, rayHitImageWidth)
@@ -85,7 +89,7 @@ func initCursorImage() {
 }
 
 func initRayHitImages() {
-	shader, err := ebiten.NewShader(circle_go)
+	shader, err := ebiten.NewShader(bytesCircleShader)
 	if err != nil {
 		panic(err)
 	}
@@ -113,12 +117,13 @@ func initRayHitImages() {
 
 // game implements ebiten.game interface.
 type game struct {
-	player     player
-	enemies    []*enemy
-	walls      []*cp.Shape
-	space      *cp.Space
-	input      input
-	rayHitInfo cp.SegmentQueryInfo
+	player        player
+	enemies       []*enemy
+	walls         []*cp.Shape
+	space         *cp.Space
+	input         input
+	rayHitInfo    cp.SegmentQueryInfo
+	rocketManager rocketManager
 }
 
 func newGame() *game {
@@ -134,6 +139,9 @@ func newGame() *game {
 	game := &game{
 		player: *newPlayer(cp.Vector{X: cameraWidth / 2.0, Y: cameraHeight / 2.0}, space),
 		space:  space,
+		rocketManager: rocketManager{
+			space: space,
+		},
 	}
 
 	game.loadMap(gameMap)
@@ -148,7 +156,7 @@ func (g *game) loadMap(gameMap *tiled.Map) {
 	)
 	// Add enemies
 	for _, enemyPos := range gameMap.ObjectGroups[objectGroupEnemy].Objects {
-		g.enemies = append(g.enemies, newEnemy(cp.Vector{X: enemyPos.X, Y: enemyPos.Y}, g.space))
+		g.enemies = append(g.enemies, newEnemy(cp.Vector{X: enemyPos.X, Y: enemyPos.Y}, g.space, enemyPos.Properties.GetBool("turnedLeft")))
 
 	}
 
@@ -198,14 +206,15 @@ func (g *game) Update() error {
 		return nil
 	}
 
-	g.space.Step(deltaTime)
+	g.space.Step(deltaTimeSec)
 
 	g.rayCast()
+	g.rocketManager.update()
 
 	// Update player and player's gun
 	g.player.update(&g.input, &g.rayHitInfo)
 
-	// Send negation of the player's gun force to the enemy
+	// Send the negative of the player's gun force to the rocket
 	var force cp.Vector
 	for _, enemy := range g.enemies {
 		if g.rayHitInfo.Shape == enemy.shape {
@@ -213,6 +222,15 @@ func (g *game) Update() error {
 			enemy.update(&force)
 		} else {
 			enemy.update(nil)
+		}
+	}
+	// Send the negative of the player's gun force to the rocket
+	if g.input.attract || g.input.repel {
+		for _, rocket := range g.rocketManager.rockets {
+			if g.rayHitInfo.Shape == rocket.shape {
+				force = g.player.gunForce.Neg()
+				rocket.body.SetForce(force)
+			}
 		}
 	}
 
@@ -260,6 +278,40 @@ func (g *game) rayCast() {
 		}
 	}
 
+	// Check rockets
+	for _, rocket := range g.rocketManager.rockets {
+		success = rocket.shape.SegmentQuery(gunRay[0], gunRay[1], 0, &info)
+		if success && info.Alpha < g.rayHitInfo.Alpha {
+			g.rayHitInfo = info
+		}
+	}
+
+	// Check player
+	// for enemy to detect player
+	for _, enemy := range g.enemies {
+		success = g.player.shape.SegmentQuery(enemy.eyeRay[0], enemy.eyeRay[1], enemyEyeRadius, &info)
+		if success && enemy.attackCooldownSec <= 0 {
+			var rocketSpawnPos cp.Vector
+			var rocketAngle float64
+			if enemyPos := enemy.body.Position(); enemy.turnedLeft {
+				rocketSpawnPos = enemyPos.Add(cp.Vector{
+					X: -tileLength, Y: -tileLength / 2.0,
+				})
+				rocketAngle = -math.Pi
+			} else {
+				rocketSpawnPos = enemyPos.Add(cp.Vector{
+					X: tileLength, Y: -tileLength / 2.0,
+				})
+			}
+			g.rocketManager.rockets = append(g.rocketManager.rockets, newRocket(
+				rocketSpawnPos, rocketAngle, g.space))
+			enemy.attackCooldownSec = enemyAttackCooldownSec
+		} else {
+			enemy.attackCooldownSec -= deltaTimeSec
+		}
+		// fmt.Printf("success: %v\n", success)
+	}
+
 }
 
 // Draw is called every frame (typically 1/60[s] for 60Hz display).
@@ -277,6 +329,9 @@ func (g *game) Draw(screen *ebiten.Image) {
 	for _, enemy := range g.enemies {
 		enemy.draw(screen)
 	}
+
+	// Draw rockets
+	g.rocketManager.draw(screen)
 
 	// Draw walls and platforms
 	screen.DrawImage(imagePlatforms, &ebiten.DrawImageOptions{})

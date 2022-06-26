@@ -14,36 +14,47 @@ import (
 
 const (
 	gridWidth, gridHeight   = 16, 32
-	enemy1IdleDurationMs    = 200
-	playerWalkingDurationMs = 75
+	durationEnemy1IdleMs    = 150
+	durationPlayerIdleMs    = 200
+	durationPlayerWalkingMs = 75
+	durationExplosionMs     = 50
+	numFramesExplosion      = 14
 )
 
 var (
-	animDeltaTime = time.Duration(math.Ceil(deltaTime * 1000))
+	animDeltaTime = time.Millisecond * time.Duration(math.Ceil(deltaTimeSec*1000))
 )
 
 var (
 	//go:embed assets/enemy1_idle.png
-	enemy1IdleBytes []byte
+	byteseEemy1Idle []byte
 	//go:embed assets/player_idle.png
-	playerIdleBytes []byte
+	bytesPlayerIdle []byte
 	//go:embed assets/player_walk.png
-	playerWalkBytes []byte
+	bytesPlayerWalk []byte
+	//go:embed assets/rocket_anim.png
+	bytesRocket []byte
+	//go:embed assets/Explosion_duplicateframes.png
+	bytesExplosion []byte
 )
 
 var (
 	animEnemy1Idle *ganim8.Animation
 	animPlayerIdle *ganim8.Animation
 	animPlayerWalk *ganim8.Animation
+	animRocket     *ganim8.Animation
+	animExplosion  *ganim8.Animation
 )
 
 func init() {
-	animPlayerIdle = newAnim("1-4", 1, playerIdleBytes, 64, 32, enemy1IdleDurationMs)
-	animPlayerWalk = newAnim("1-8", 1, playerWalkBytes, 128, 32, playerWalkingDurationMs)
-	animEnemy1Idle = newAnim("1-4", 1, enemy1IdleBytes, 64, 32, enemy1IdleDurationMs)
+	animPlayerIdle = newAnim("1-4", 1, bytesPlayerIdle, gridWidth, gridHeight, 64, 32, durationPlayerIdleMs)
+	animPlayerWalk = newAnim("1-8", 1, bytesPlayerWalk, gridWidth, gridHeight, 128, 32, durationPlayerWalkingMs)
+	animEnemy1Idle = newAnim("1-4", 1, byteseEemy1Idle, gridWidth, gridHeight, 64, 32, durationEnemy1IdleMs)
+	animRocket = newAnim("1-2", 1, bytesRocket, 16, 16, 32, 16, 50)
+	animExplosion = newAnim("1-14", 1, bytesExplosion, 32, 32, 32*numFramesExplosion, 32, durationExplosionMs)
 }
 
-func newAnim(column string, row int, fileBytes []byte, imageWidth, imageHeight, frameDurationMs int) *ganim8.Animation {
+func newAnim(column string, row int, fileBytes []byte, gridWidth, gridHeight, imageWidth, imageHeight, frameDurationMs int) *ganim8.Animation {
 	img, err := png.Decode(bytes.NewReader(fileBytes))
 	panicErr(err)
 	image := ebiten.NewImageFromImage(img)
