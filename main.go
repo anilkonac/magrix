@@ -8,6 +8,8 @@ import (
 	"log"
 	"math"
 
+	_ "embed"
+
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/jakecoffman/cp"
@@ -43,6 +45,8 @@ var (
 )
 
 var (
+	//go:embed circle.go
+	bytesCircleShader  []byte
 	imageCursor        = ebiten.NewImage(crosshairRadius*2, crosshairRadius*2)
 	imageRayHit        = ebiten.NewImage(rayHitImageWidth, rayHitImageWidth)
 	imageRayHitAttract = ebiten.NewImage(rayHitImageWidth, rayHitImageWidth)
@@ -85,7 +89,7 @@ func initCursorImage() {
 }
 
 func initRayHitImages() {
-	shader, err := ebiten.NewShader(circle_go)
+	shader, err := ebiten.NewShader(bytesCircleShader)
 	if err != nil {
 		panic(err)
 	}

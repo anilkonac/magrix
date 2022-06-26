@@ -127,6 +127,8 @@ func (m *rocketManager) update( /*playerPos *cp.Vector*/ ) (hitBodies []*cp.Body
 				// Delete from space
 				m.space.RemoveShape(rocket.shape)
 				m.space.RemoveBody(rocket.body)
+
+				rocketTarget = nil
 			}
 		}
 	}
@@ -148,6 +150,8 @@ func (m *rocketManager) update( /*playerPos *cp.Vector*/ ) (hitBodies []*cp.Body
 				copy(m.explosions[iExplo:], m.explosions[iExplo+1:])
 				m.explosions[len(m.explosions)-1] = nil
 				m.explosions = m.explosions[:len(m.explosions)-1]
+
+				exploTarget = nil
 			}
 		}
 
