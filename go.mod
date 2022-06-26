@@ -6,6 +6,7 @@ require (
 	github.com/hajimehoshi/ebiten/v2 v2.3.5
 	github.com/jakecoffman/cp v1.2.0
 	github.com/lafriks/go-tiled v0.7.0
+	github.com/melonfunction/ebiten-camera v0.0.0-20220108183711-5c8a2c471904
 	github.com/yohamta/ganim8/v2 v2.0.22
 )
 

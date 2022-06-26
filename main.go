@@ -15,6 +15,7 @@ import (
 	"github.com/jakecoffman/cp"
 	"github.com/lafriks/go-tiled"
 	"github.com/lafriks/go-tiled/render"
+	camera "github.com/melonfunction/ebiten-camera"
 )
 
 const (
@@ -125,6 +126,7 @@ type game struct {
 	input         input
 	rayHitInfo    cp.SegmentQueryInfo
 	rocketManager rocketManager
+	cam           *camera.Camera
 }
 
 func newGame() *game {
@@ -142,6 +144,7 @@ func newGame() *game {
 		rocketManager: rocketManager{
 			space: space,
 		},
+		cam: camera.NewCamera(screenWidth, screenHeight, 0, 0, 0, 1),
 	}
 
 	game.loadMap(gameMap)
@@ -338,29 +341,34 @@ var emptyDrawOptions ebiten.DrawImageOptions
 
 // Draw is called every frame (typically 1/60[s] for 60Hz display).
 func (g *game) Draw(screen *ebiten.Image) {
-	screen.Fill(colorBackground)
+	// screen.Fill(colorBackground)
 
 	// Draw decorations
-	screen.DrawImage(imageDecorations, &emptyDrawOptions)
-	screen.DrawImage(imageComputers, &emptyDrawOptions)
-	screen.DrawImage(imageInteractables, &emptyDrawOptions)
+	// screen.DrawImage(imageDecorations, &emptyDrawOptions)
+	// screen.DrawImage(imageComputers, &emptyDrawOptions)
+	// screen.DrawImage(imageInteractables, &emptyDrawOptions)
 
 	// Draw player and its gun
 	g.player.draw(screen)
+	g.cam.Surface.Clear()
+	g.cam.Surface.Fill(colorBackground)
+	g.cam.Surface.DrawImage(screen, g.cam.GetTranslation(g.player.pos.X, g.player.pos.Y))
+
+	g.cam.Blit(screen)
 
 	// Draw enemies
-	for _, enemy := range g.enemies {
-		enemy.draw(screen)
-	}
+	// for _, enemy := range g.enemies {
+	// 	enemy.draw(screen)
+	// }
 
 	// Draw rockets
-	g.rocketManager.draw(screen)
+	// g.rocketManager.draw(screen)
 
 	// Draw walls and platforms
-	screen.DrawImage(imagePlatforms, &emptyDrawOptions)
+	// screen.DrawImage(imagePlatforms, &emptyDrawOptions)
 
 	// Draw crosshair
-	screen.DrawImage(imageCursor, &drawOptionsCursor)
+	// screen.DrawImage(imageCursor, &drawOptionsCursor)
 
 	// Draw rayhit
 	var imageHit *ebiten.Image

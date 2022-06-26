@@ -11,6 +11,7 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/jakecoffman/cp"
+	camera "github.com/melonfunction/ebiten-camera"
 	"github.com/yohamta/ganim8/v2"
 )
 
@@ -272,7 +273,7 @@ func (p *player) updateGeometryMatrices() {
 	p.drawOptionsGun.GeoM.Translate(p.posGun.X, p.posGun.Y)
 }
 
-func (p *player) draw(dst *ebiten.Image) {
+func (p *player) draw(cam *camera.Camera) {
 	p.curAnim.Draw(dst, &p.drawOptions)
 
 	// Draw prototype gun
