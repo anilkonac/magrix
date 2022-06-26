@@ -37,6 +37,8 @@ const (
 
 const mapPath = "assets/gameMap.tmx"
 
+const zoomMultiplier = 0.1
+
 var (
 	colorBackground = color.RGBA{38, 38, 38, 255}
 	colorGun        = color.RGBA{253, 147, 89, 255}
@@ -225,8 +227,11 @@ func (g *game) addWalls(wallObjects []*tiled.Object) {
 // Update is called every tick (1/60 [s] by default).
 func (g *game) Update() error {
 	g.input.update()
-	// drawOptionsCursor.GeoM.Reset()
-	// drawOptionsCursor.GeoM.Translate(g.input.cursorPos.X-crosshairRadius, g.input.cursorPos.Y-crosshairRadius)
+	if g.input.wheelDy > 0 {
+		cam.Zoom(1.0 + zoomMultiplier)
+	} else if g.input.wheelDy < 0 {
+		cam.Zoom(1.0 - zoomMultiplier)
+	}
 	cursorX, cursorY = cam.GetCursorCoords()
 	drawOptionsCursor = *cam.GetTranslation(cursorX-crosshairRadius, cursorY-crosshairRadius)
 
@@ -243,6 +248,7 @@ func (g *game) Update() error {
 
 	// Update player and player's gun
 	g.player.update(&g.input, &g.rayHitInfo)
+	cam.SetPosition(g.player.pos.X, g.player.pos.Y)
 
 	// Send the negative of the player's gun force to the rocket
 	var force cp.Vector
@@ -264,14 +270,11 @@ func (g *game) Update() error {
 		}
 	}
 
-	// Update geometry matrices
+	// Update draw options
 	const rayHitImageRadius = rayHitImageWidth / 2.0
 
-	cam.SetPosition(g.player.pos.X, g.player.pos.Y)
 	drawOptionsZero = cam.GetTranslation(0, 0)
-
-	drawOptionsRayHit.GeoM.Reset()
-	drawOptionsRayHit.GeoM.Translate(g.rayHitInfo.Point.X-rayHitImageRadius, g.rayHitInfo.Point.Y-rayHitImageRadius)
+	drawOptionsRayHit = *cam.GetTranslation(g.rayHitInfo.Point.X-rayHitImageRadius, g.rayHitInfo.Point.Y-rayHitImageRadius)
 
 	return nil
 }
@@ -353,9 +356,6 @@ func (g *game) Draw(screen *ebiten.Image) {
 	cam.Surface.Fill(colorBackground)
 
 	// Draw decorations
-	// screen.DrawImage(imageDecorations, &emptyDrawOptions)
-	// screen.DrawImage(imageComputers, &emptyDrawOptions)
-	// screen.DrawImage(imageInteractables, &emptyDrawOptions)
 	cam.Surface.DrawImage(imageDecorations, drawOptionsZero)
 	cam.Surface.DrawImage(imageComputers, drawOptionsZero)
 	cam.Surface.DrawImage(imageInteractables, drawOptionsZero)
@@ -364,9 +364,9 @@ func (g *game) Draw(screen *ebiten.Image) {
 	g.player.draw()
 
 	// Draw enemies
-	// for _, enemy := range g.enemies {
-	// 	enemy.draw(screen)
-	// }
+	for _, enemy := range g.enemies {
+		enemy.draw()
+	}
 
 	// Draw rockets
 	// g.rocketManager.draw(screen)
@@ -376,20 +376,18 @@ func (g *game) Draw(screen *ebiten.Image) {
 	cam.Surface.DrawImage(imagePlatforms, drawOptionsZero)
 
 	// Draw crosshair
-	// screen.DrawImage(imageCursor, &drawOptionsCursor)
-	// g.cam.Surface.DrawImage(imageCursor, &drawOptionsCursor)
 	cam.Surface.DrawImage(imageCursor, &drawOptionsCursor)
 
 	// Draw rayhit
-	// var imageHit *ebiten.Image
-	// if g.input.attract {
-	// 	imageHit = imageRayHitAttract
-	// } else if g.input.repel {
-	// 	imageHit = imageRayHitRepel
-	// } else {
-	// 	imageHit = imageRayHit
-	// }
-	// screen.DrawImage(imageHit, &drawOptionsRayHit)
+	var imageHit *ebiten.Image
+	if g.input.attract {
+		imageHit = imageRayHitAttract
+	} else if g.input.repel {
+		imageHit = imageRayHitRepel
+	} else {
+		imageHit = imageRayHit
+	}
+	cam.Surface.DrawImage(imageHit, &drawOptionsRayHit)
 
 	cam.Blit(screen)
 

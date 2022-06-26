@@ -4,7 +4,6 @@ package main
 
 import (
 	"bytes"
-	"fmt"
 	"image/png"
 	"math"
 
@@ -269,7 +268,6 @@ func (p *player) updateDrawOptions() {
 		p.drawOptionsAnim.OriginX = 0.0
 
 	}
-	fmt.Printf("p.angleGun: %v\n", p.angleGun)
 
 	// Gun
 	p.drawOptionsGun.GeoM.Reset()
@@ -279,22 +277,17 @@ func (p *player) updateDrawOptions() {
 }
 
 func (p *player) draw() {
-	// p.curAnim.Draw(dst, &p.drawOptions)
+	// Draw player
 	imagePlayer.Clear()
 	p.curAnim.Draw(imagePlayer, &p.drawOptionsAnim)
-	// p.curAnim.Draw(cam.Surface, &p.drawOptions)
-
 	cam.Surface.DrawImage(imagePlayer, &p.drawOptions)
 
-	// Draw prototype gun
+	// Draw gun
 	if p.stateGun == gunStateAttract {
-		// dst.DrawImage(imageGunAttract, &p.drawOptionsGun)
 		cam.Surface.DrawImage(imageGunAttract, &p.drawOptionsGun)
 	} else if p.stateGun == gunStateRepel {
-		// dst.DrawImage(imageGunRepel, &p.drawOptionsGun)
 		cam.Surface.DrawImage(imageGunRepel, &p.drawOptionsGun)
 	} else {
-		// dst.DrawImage(imageGunIdle, &p.drawOptionsGun)
 		cam.Surface.DrawImage(imageGunIdle, &p.drawOptionsGun)
 	}
 

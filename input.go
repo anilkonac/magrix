@@ -14,8 +14,9 @@ type input struct {
 	attract bool
 	repel   bool
 
-	escape    bool
-	pausePlay bool
+	escape           bool
+	pausePlay        bool
+	wheelDx, wheelDy float64
 }
 
 func (i *input) update() {
@@ -34,4 +35,6 @@ func (i *input) update() {
 
 	i.escape = ebiten.IsKeyPressed(ebiten.KeyEscape)
 	i.pausePlay = inpututil.IsKeyJustPressed(ebiten.KeyP) || inpututil.IsKeyJustPressed(ebiten.KeyPause)
+
+	i.wheelDx, i.wheelDy = ebiten.Wheel()
 }

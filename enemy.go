@@ -22,9 +22,12 @@ const (
 	enemyAttackCooldownSec = 2.0
 )
 
+var imageEnemy = ebiten.NewImage(16, 32)
+
 type enemy struct {
 	size              cp.Vector
-	drawOptions       ganim8.DrawOptions
+	drawOptions       ebiten.DrawImageOptions
+	drawOptionsAnim   ganim8.DrawOptions
 	body              *cp.Body
 	shape             *cp.Shape
 	curAnim           ganim8.Animation
@@ -38,9 +41,9 @@ func newEnemy(pos cp.Vector, space *cp.Space, turnedLeft bool) *enemy {
 		size: cp.Vector{
 			X: enemyWidthTile * tileLength,
 			Y: enemyHeightTile * tileLength},
-		drawOptions: ganim8.DrawOptions{
-			OriginX: 0.5,
-			OriginY: 0.64,
+		drawOptionsAnim: ganim8.DrawOptions{
+			OriginX: 0.0,
+			OriginY: 0.15,
 			ScaleX:  1.00,
 			ScaleY:  1.00,
 		},
@@ -49,7 +52,7 @@ func newEnemy(pos cp.Vector, space *cp.Space, turnedLeft bool) *enemy {
 		turnedLeft:        turnedLeft,
 	}
 	if turnedLeft {
-		enemy.drawOptions.ScaleX = -1.0
+		enemy.drawOptionsAnim.ScaleX = -1.0
 	}
 
 	enemy.curAnim.GoToFrame(rand.Intn(4)) // Have all enemies start at different frames
@@ -93,13 +96,24 @@ func (e *enemy) update(force *cp.Vector) {
 
 	// Update animation
 	e.curAnim.Update(animDeltaTime)
-	e.drawOptions.X = pos.X
-	e.drawOptions.Y = pos.Y
-	e.drawOptions.Rotate = e.body.Angle()
+	e.drawOptions.GeoM.Reset()
+	e.drawOptions.GeoM.Translate(-tileLength/2.0, -tileLength)
+	e.drawOptions.GeoM.Rotate(e.body.Angle())
+	e.drawOptions.GeoM.Concat(cam.GetTranslation(pos.X, pos.Y).GeoM)
+	if e.turnedLeft {
+		e.drawOptionsAnim.ScaleX = -1.0
+		e.drawOptionsAnim.OriginX = 1.0
+	} else {
+		e.drawOptionsAnim.ScaleX = 1.0
+		e.drawOptionsAnim.OriginX = 0.0
+	}
 }
 
-func (e *enemy) draw(dst *ebiten.Image) {
-	e.curAnim.Draw(dst, &e.drawOptions)
+func (e *enemy) draw() {
+	// e.curAnim.Draw(dst, &e.drawOptions)
+	imageEnemy.Clear()
+	e.curAnim.Draw(imageEnemy, &e.drawOptionsAnim)
+	cam.Surface.DrawImage(imageEnemy, &e.drawOptions)
 }
 
 func enemyUpdateVelocity(body *cp.Body, gravity cp.Vector, damping, dt float64) {
