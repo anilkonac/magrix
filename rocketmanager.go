@@ -3,7 +3,6 @@ package main
 import (
 	"math"
 
-	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/jakecoffman/cp"
 	"github.com/yohamta/ganim8/v2"
 )
@@ -17,29 +16,21 @@ const (
 	explosionTotalDurationMs = durationExplosionMs * 14
 )
 
-var (
-	imageRocket    = ebiten.NewImage(8, 3)
-	imageExplosion = ebiten.NewImage(32, 32)
-)
-
 type explosion struct {
-	pos             cp.Vector
-	drawOptions     ebiten.DrawImageOptions
-	drawOptionsAnim ganim8.DrawOptions
-	elapsedMs       int64
-	animation       ganim8.Animation
+	drawOptions ganim8.DrawOptions
+	elapsedMs   int64
+	animation   ganim8.Animation
 }
 
 func newExplosion(pos cp.Vector) *explosion {
 	explo := &explosion{
-		pos: pos,
-		drawOptionsAnim: ganim8.DrawOptions{
-			// X:       pos.X,
-			// Y:       pos.Y,
+		drawOptions: ganim8.DrawOptions{
+			X:       pos.X,
+			Y:       pos.Y,
 			ScaleX:  1.0,
 			ScaleY:  1.0,
-			OriginX: 0.0,
-			OriginY: 0.0,
+			OriginX: 0.5,
+			OriginY: 0.5,
 		},
 		animation: *animExplosion,
 	}
@@ -48,10 +39,9 @@ func newExplosion(pos cp.Vector) *explosion {
 }
 
 type rocket struct {
-	body            *cp.Body
-	shape           *cp.Shape
-	drawOptions     ebiten.DrawImageOptions
-	drawOptionsAnim ganim8.DrawOptions
+	body        *cp.Body
+	shape       *cp.Shape
+	drawOptions ganim8.DrawOptions
 }
 
 func newRocket(startPos cp.Vector, angle float64, space *cp.Space) *rocket {
@@ -67,20 +57,16 @@ func newRocket(startPos cp.Vector, angle float64, space *cp.Space) *rocket {
 	space.AddBody(body)
 	space.AddShape(shape)
 
-	drawOptsAnim := ganim8.DrawOptions{
-		// X:       startPos.X,
-		// Y:       startPos.Y,
+	drawOpts := ganim8.DrawOptions{
+		X:       startPos.X,
+		Y:       startPos.Y,
 		ScaleX:  1.0,
 		ScaleY:  1.0,
-		OriginX: 0.0,
-		OriginY: 0.0,
+		OriginX: 0.5,
+		OriginY: 0.5,
 	}
 
-	return &rocket{
-		body:            body,
-		shape:           shape,
-		drawOptionsAnim: drawOptsAnim,
-	}
+	return &rocket{body, shape, drawOpts}
 }
 
 type rocketManager struct {
@@ -116,16 +102,17 @@ func (m *rocketManager) update( /*playerPos *cp.Vector*/ ) (hitBodies []*cp.Body
 			continue
 		}
 
+		// Update position
+		pos := rocket.body.Position()
+		rocket.drawOptions.X = pos.X
+		rocket.drawOptions.Y = pos.Y
+
+		// Update angle
+		rocket.drawOptions.Rotate = rocket.body.Angle()
+
 		// Eliminate gravity
 		// velocityPercent := rocket.body.Velocity().Length() / rocketVelocity // To eliminate floating stopped rockets
 		rocket.body.SetForce(cp.Vector{X: 0, Y: -gravity * rocketMass /* * velocityPercent*/})
-
-		// Update draw options
-		pos := rocket.body.Position()
-		rocket.drawOptions.GeoM.Reset()
-		// rocket.drawOptions.GeoM.Translate(-4, -1.5)
-		rocket.drawOptions.GeoM.Rotate(rocket.body.Angle())
-		rocket.drawOptions.GeoM.Concat(cam.GetTranslation(pos.X, pos.Y).GeoM)
 	}
 
 	// TODO: Object pooling?
@@ -154,9 +141,7 @@ func (m *rocketManager) update( /*playerPos *cp.Vector*/ ) (hitBodies []*cp.Body
 		explo.elapsedMs += animDeltaTime.Milliseconds()
 		if explo.elapsedMs >= explosionTotalDurationMs {
 			explosionsToBeDeleted = append(explosionsToBeDeleted, explo)
-			continue
 		}
-		explo.drawOptions = *cam.GetTranslation(explo.pos.X-16, explo.pos.Y-16)
 	}
 
 	// Delete ended explosion animation
@@ -179,18 +164,12 @@ func (m *rocketManager) update( /*playerPos *cp.Vector*/ ) (hitBodies []*cp.Body
 func (m *rocketManager) draw() {
 	// Draw rockets
 	for _, rocket := range m.rockets {
-		// TODO: Fix not drawing rocket
-		// imageRocket.Clear()
-		imageRocket.Fill(colorGunAttract)
-		animRocket.Draw(imageRocket, &rocket.drawOptionsAnim)
-		cam.Surface.DrawImage(imageRocket, &rocket.drawOptions)
+		animRocket.Draw(imageObjects, &rocket.drawOptions)
 	}
 
 	// Draw explosions
 	for _, explo := range m.explosions {
-		imageExplosion.Clear()
-		explo.animation.Draw(imageExplosion, &explo.drawOptionsAnim)
-		cam.Surface.DrawImage(imageExplosion, &explo.drawOptions)
+		explo.animation.Draw(imageObjects, &explo.drawOptions)
 	}
 }
 

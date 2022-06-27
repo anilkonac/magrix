@@ -98,7 +98,7 @@ func (e *enemy) update(force *cp.Vector) {
 }
 
 func (e *enemy) draw() {
-	e.curAnim.Draw(imageTemp, &e.drawOptions)
+	e.curAnim.Draw(imageObjects, &e.drawOptions)
 }
 
 func enemyUpdateVelocity(body *cp.Body, gravity cp.Vector, damping, dt float64) {

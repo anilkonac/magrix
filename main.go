@@ -69,7 +69,7 @@ var (
 	imageInteractables *ebiten.Image
 	imageComputers     *ebiten.Image
 	imageDecorations   *ebiten.Image
-	imageTemp          *ebiten.Image = ebiten.NewImage(mapWidth, mapHeight)
+	imageObjects       *ebiten.Image = ebiten.NewImage(mapWidth, mapHeight)
 )
 
 var (
@@ -356,8 +356,8 @@ func (g *game) rayCast() {
 // Draw is called every frame (typically 1/60[s] for 60Hz display).
 func (g *game) Draw(screen *ebiten.Image) {
 	// screen.Fill(colorBackground)
-	imageTemp.Fill(colorBackground)
-	cam.Surface.Fill(color.Black)
+	imageObjects.Clear()
+	cam.Surface.Fill(colorBackground)
 
 	// Draw decorations
 	cam.Surface.DrawImage(imageDecorations, drawOptionsZero)
@@ -372,9 +372,10 @@ func (g *game) Draw(screen *ebiten.Image) {
 		enemy.draw()
 	}
 
-	// // Draw rockets
-	// g.rocketManager.draw()
-	cam.Surface.DrawImage(imageTemp, drawOptionsZero)
+	// Draw rockets
+	g.rocketManager.draw()
+
+	cam.Surface.DrawImage(imageObjects, drawOptionsZero)
 
 	// // Draw walls and platforms
 	cam.Surface.DrawImage(imagePlatforms, drawOptionsZero)

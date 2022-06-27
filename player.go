@@ -273,15 +273,15 @@ func (p *player) updateDrawOptions() {
 
 func (p *player) draw() {
 	// Draw player
-	p.curAnim.Draw(imageTemp, &p.drawOptions)
+	p.curAnim.Draw(imageObjects, &p.drawOptions)
 
 	// Draw gun
 	if p.stateGun == gunStateAttract {
-		imageTemp.DrawImage(imageGunAttract, &p.drawOptionsGun)
+		imageObjects.DrawImage(imageGunAttract, &p.drawOptionsGun)
 	} else if p.stateGun == gunStateRepel {
-		imageTemp.DrawImage(imageGunRepel, &p.drawOptionsGun)
+		imageObjects.DrawImage(imageGunRepel, &p.drawOptionsGun)
 	} else {
-		imageTemp.DrawImage(imageGunIdle, &p.drawOptionsGun)
+		imageObjects.DrawImage(imageGunIdle, &p.drawOptionsGun)
 	}
 
 	// ebitenutil.DrawLine(dst, p.gunRay[0].X, p.gunRay[0].Y, p.gunRay[1].X, p.gunRay[1].Y, colorCrosshair)
