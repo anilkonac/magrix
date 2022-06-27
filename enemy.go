@@ -110,7 +110,6 @@ func (e *enemy) update(force *cp.Vector) {
 }
 
 func (e *enemy) draw() {
-	// e.curAnim.Draw(dst, &e.drawOptions)
 	imageEnemy.Clear()
 	e.curAnim.Draw(imageEnemy, &e.drawOptionsAnim)
 	cam.Surface.DrawImage(imageEnemy, &e.drawOptions)

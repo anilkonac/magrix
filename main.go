@@ -372,7 +372,6 @@ func (g *game) Draw(screen *ebiten.Image) {
 	g.rocketManager.draw()
 
 	// Draw walls and platforms
-	// screen.DrawImage(imagePlatforms, &emptyDrawOptions)
 	cam.Surface.DrawImage(imagePlatforms, drawOptionsZero)
 
 	// Draw crosshair

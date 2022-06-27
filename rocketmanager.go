@@ -179,18 +179,16 @@ func (m *rocketManager) update( /*playerPos *cp.Vector*/ ) (hitBodies []*cp.Body
 func (m *rocketManager) draw() {
 	// Draw rockets
 	for _, rocket := range m.rockets {
+		// TODO: Fix not drawing rocket
 		// imageRocket.Clear()
 		imageRocket.Fill(colorGunAttract)
 		animRocket.Draw(imageRocket, &rocket.drawOptionsAnim)
 		cam.Surface.DrawImage(imageRocket, &rocket.drawOptions)
-		// animRocket.Draw(dst, &rocket.drawOptions)
 	}
 
 	// Draw explosions
 	for _, explo := range m.explosions {
-		// TODO: Fix not drawing rocket
 		imageExplosion.Clear()
-		// imageExplosion.Fill(color.White)
 		explo.animation.Draw(imageExplosion, &explo.drawOptionsAnim)
 		cam.Surface.DrawImage(imageExplosion, &explo.drawOptions)
 	}
