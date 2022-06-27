@@ -16,8 +16,8 @@ const (
 	enemyMoment            = 50
 	enemyWidthTile         = 1
 	enemyHeightTile        = 1.5
-	enemyEyeRange          = cameraWidth
-	enemyEyeRadius         = cameraHeight / 4.0
+	enemyEyeRange          = mapWidth / 2.0
+	enemyEyeRadius         = mapHeight / 8.0
 	enemyAttackCooldownSec = 2.0
 )
 

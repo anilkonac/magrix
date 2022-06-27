@@ -7,6 +7,7 @@ import (
 	"image/color"
 	"log"
 	"math"
+	"time"
 
 	_ "embed"
 
@@ -16,16 +17,16 @@ import (
 	"github.com/lafriks/go-tiled"
 	"github.com/lafriks/go-tiled/render"
 	camera "github.com/melonfunction/ebiten-camera"
+	"github.com/yohamta/ganim8/v2"
 )
 
 const (
-	cameraWidth  = 960
-	cameraHeight = 720
 	screenWidth  = 960
 	screenHeight = 720
 	deltaTimeSec = 1.0 / 60.0
 	mapWidth     = 960
 	mapHeight    = 960
+	tileLength   = 16
 )
 
 const (
@@ -39,45 +40,61 @@ const (
 
 const mapPath = "assets/gameMap.tmx"
 
-const zoomMultiplier = 0.1
+const (
+	zoomMultiplier        = 0.1
+	uiArrowDistance       = screenHeight/2.0 - 50
+	interactionRadiusTile = 1.25
+)
 
 var (
 	colorBackground = color.RGBA{38, 38, 38, 255}
-	colorGun        = color.RGBA{253, 147, 89, 255}
+	colorOrange     = color.RGBA{253, 147, 89, 255}
+	colorBlue       = color.RGBA{111, 215, 231, 255}
 	colorGunAttract = color.RGBA{216, 17, 89, 255} // ~ Ruby
 	colorGunRepel   = color.RGBA{80, 142, 237, 255}
 	colorPlayer     = color.RGBA{155, 201, 149, 255} // ~ Dark Sea Green
 	colorCrosshair  = color.RGBA{255, 251, 255, 255} // ~ Snow
 	colorEnemy      = color.RGBA{165, 1, 4, 255}     // ~ Rufous
+	colorGreen      = color.RGBA{0, 231, 86, 255}
 )
 
 var (
 	//go:embed circle.go
-	bytesCircleShader  []byte
-	imageCursor        = ebiten.NewImage(crosshairRadius*2, crosshairRadius*2)
-	imageRayHit        = ebiten.NewImage(rayHitImageWidth, rayHitImageWidth)
-	imageRayHitAttract = ebiten.NewImage(rayHitImageWidth, rayHitImageWidth)
-	imageRayHitRepel   = ebiten.NewImage(rayHitImageWidth, rayHitImageWidth)
-	drawOptionsCursor  ebiten.DrawImageOptions
-	drawOptionsRayHit  ebiten.DrawImageOptions
-	drawOptionsZero    *ebiten.DrawImageOptions
-	tileLength         float64
+	bytesCircleShader      []byte
+	imageCrosshair         = ebiten.NewImage(crosshairRadius*2, crosshairRadius*2)
+	imageRayHit            = ebiten.NewImage(rayHitImageWidth, rayHitImageWidth)
+	imageRayHitAttract     = ebiten.NewImage(rayHitImageWidth, rayHitImageWidth)
+	imageRayHitRepel       = ebiten.NewImage(rayHitImageWidth, rayHitImageWidth)
+	imageArrowBlue         = ebiten.NewImage(tileLength, tileLength)
+	imageArrowOrange       = ebiten.NewImage(tileLength, tileLength)
+	drawOptionsCursor      ebiten.DrawImageOptions
+	drawOptionsRayHit      ebiten.DrawImageOptions
+	drawOptionsZero        *ebiten.DrawImageOptions
+	drawOptionsArrowBlue   ganim8.DrawOptions
+	drawOptionsArrowOrange ganim8.DrawOptions
+	drawOptionsArrowGreen  ganim8.DrawOptions
 )
 
 var (
-	imagePlatforms     *ebiten.Image
-	imageInteractables *ebiten.Image
-	imageComputers     *ebiten.Image
-	imageDecorations   *ebiten.Image
-	imageObjects       *ebiten.Image = ebiten.NewImage(mapWidth, mapHeight)
+	imagePlatforms   *ebiten.Image
+	imageDecorations *ebiten.Image
+	imageObjects     *ebiten.Image = ebiten.NewImage(mapWidth, mapHeight)
 )
 
 var (
 	cam              = camera.NewCamera(screenWidth, screenHeight, 0, 0, 0, 1)
 	cursorX, cursorY float64
+	zoom             = 3.5
+	zoomMin          = 1.0
+	zoomMax          = 6.0
+	// zoomMax =
 )
 
-var gamePaused bool
+var (
+	gamePaused      bool
+	showArrowBlue   bool
+	showArrowOrange bool
+)
 
 func panicErr(err error) {
 	if err != nil {
@@ -88,16 +105,18 @@ func panicErr(err error) {
 func init() {
 	initCursorImage()
 	initRayHitImages()
+	imageArrowBlue.Fill(colorBlue)
+	imageArrowOrange.Fill(colorOrange)
 }
 
 func initCursorImage() {
-	ebitenutil.DrawLine(imageCursor, 0, crosshairRadius,
+	ebitenutil.DrawLine(imageCrosshair, 0, crosshairRadius,
 		crosshairRadius-crosshairInnerRadius, crosshairRadius, colorCrosshair)
-	ebitenutil.DrawLine(imageCursor, crosshairRadius, 0,
+	ebitenutil.DrawLine(imageCrosshair, crosshairRadius, 0,
 		crosshairRadius, crosshairRadius-crosshairInnerRadius, colorCrosshair)
-	ebitenutil.DrawLine(imageCursor, crosshairRadius+crosshairInnerRadius,
+	ebitenutil.DrawLine(imageCrosshair, crosshairRadius+crosshairInnerRadius,
 		crosshairRadius, 2*crosshairRadius, crosshairRadius, colorCrosshair)
-	ebitenutil.DrawLine(imageCursor, crosshairRadius, crosshairRadius+crosshairInnerRadius,
+	ebitenutil.DrawLine(imageCrosshair, crosshairRadius, crosshairRadius+crosshairInnerRadius,
 		crosshairRadius, 2*crosshairRadius, colorCrosshair)
 }
 
@@ -111,7 +130,7 @@ func initRayHitImages() {
 	imageRayHit.DrawRectShader(rayHitImageWidth, rayHitImageWidth, shader, &ebiten.DrawRectShaderOptions{
 		Uniforms: map[string]interface{}{
 			"Radius": float32(rayHitImageWidth / 2.0),
-			"Color":  []float32{float32(colorGun.R) / 255.0, float32(colorGun.G) / 255.0, float32(colorGun.B) / 255.0, float32(colorGun.A) / 255.0},
+			"Color":  []float32{float32(colorOrange.R) / 255.0, float32(colorOrange.G) / 255.0, float32(colorOrange.B) / 255.0, float32(colorOrange.A) / 255.0},
 		},
 	})
 	imageRayHitAttract.DrawRectShader(rayHitImageWidth, rayHitImageWidth, shader, &ebiten.DrawRectShaderOptions{
@@ -130,15 +149,19 @@ func initRayHitImages() {
 
 // game implements ebiten.game interface.
 type game struct {
-	player        player
-	enemies       []*enemy
-	walls         []*cp.Shape
-	space         *cp.Space
-	input         input
-	rayHitInfo    cp.SegmentQueryInfo
-	rocketManager rocketManager
-	electroWalls  []*electricWall
-	terminals     []*terminal
+	player         player
+	enemies        []*enemy
+	walls          []*cp.Shape
+	space          *cp.Space
+	input          input
+	rayHitInfo     cp.SegmentQueryInfo
+	rocketManager  rocketManager
+	terminalBlue   *terminal
+	terminalOrange *terminal
+	terminalIntro  *terminal
+	eWallBlue      *electricWall
+	eWallOrange    *electricWall
+	button         *button
 }
 
 func newGame() *game {
@@ -149,7 +172,7 @@ func newGame() *game {
 	// Parse map file
 	gameMap, err := tiled.LoadFile(mapPath)
 	panicErr(err)
-	tileLength = float64(gameMap.TileWidth)
+	// tileLength = float64(gameMap.TileWidth)
 
 	game := &game{
 		space: space,
@@ -157,9 +180,16 @@ func newGame() *game {
 			space: space,
 		},
 	}
-	cam.Zoom(2.0)
+	cam.Zoom(zoom)
 
 	game.loadMap(gameMap)
+
+	drawOptionsArrowBlue.ScaleX = 1.0
+	drawOptionsArrowBlue.ScaleY = 1.0
+	drawOptionsArrowOrange.ScaleX = 1.0
+	drawOptionsArrowOrange.ScaleY = 1.0
+	drawOptionsArrowGreen.ScaleX = 1.0
+	drawOptionsArrowGreen.ScaleY = 1.0
 
 	return game
 }
@@ -171,19 +201,20 @@ func (g *game) loadMap(gameMap *tiled.Map) {
 		objectGroupEnemy         = 2
 		objectGroupWallsElectric = 3
 		objectGroupTerminals     = 4
+		objectGroupButton        = 5
 	)
 
 	g.addWalls(gameMap.ObjectGroups[objectGroupWalls].Objects)
 
-	// Add Electric Walls
-	for _, objectElect := range gameMap.ObjectGroups[objectGroupWallsElectric].Objects {
-		g.electroWalls = append(g.electroWalls, newElectricWall(objectElect, g.space))
-	}
+	// Add Electric Walls (Manual assignment for now)
+	g.eWallBlue = newElectricWall(gameMap.ObjectGroups[objectGroupWallsElectric].Objects[0], g.space)
+	g.eWallOrange = newElectricWall(gameMap.ObjectGroups[objectGroupWallsElectric].Objects[1], g.space)
 
 	// Add terminals
-	for _, objectTerm := range gameMap.ObjectGroups[objectGroupTerminals].Objects {
-		g.terminals = append(g.terminals, newTerminal(objectTerm, g.space))
-	}
+	g.terminalIntro = newTerminal(gameMap.ObjectGroups[objectGroupTerminals].Objects[2], g.space)
+	g.terminalIntro.spr = spriteTerminalGreen
+	g.terminalBlue = newTerminal(gameMap.ObjectGroups[objectGroupTerminals].Objects[0], g.space)
+	g.terminalOrange = newTerminal(gameMap.ObjectGroups[objectGroupTerminals].Objects[1], g.space)
 
 	var playerStartLoc cp.Vector
 	playerStartLoc.X = gameMap.ObjectGroups[objectGroupPlayer].Objects[0].X
@@ -195,6 +226,9 @@ func (g *game) loadMap(gameMap *tiled.Map) {
 		g.enemies = append(g.enemies, newEnemy(cp.Vector{X: enemyPos.X, Y: enemyPos.Y}, g.space, enemyPos.Properties.GetBool("turnedLeft")))
 
 	}
+
+	// Add the button
+	g.button = newButton(gameMap.ObjectGroups[objectGroupButton].Objects[0], g.space)
 
 	const (
 		layerPlatform    = 1
@@ -233,10 +267,12 @@ func (g *game) addWalls(wallObjects []*tiled.Object) {
 func (g *game) Update() error {
 	g.input.update()
 	if g.input.wheelDy > 0 {
-		cam.Zoom(1.0 + zoomMultiplier)
+		zoom += zoomMultiplier
 	} else if g.input.wheelDy < 0 {
-		cam.Zoom(1.0 - zoomMultiplier)
+		zoom -= zoomMultiplier
 	}
+	zoom = cp.Clamp(zoom, zoomMin, zoomMax)
+	cam.SetZoom(zoom)
 	cursorX, cursorY = cam.GetCursorCoords()
 	drawOptionsCursor = *cam.GetTranslation(cursorX-crosshairRadius, cursorY-crosshairRadius)
 
@@ -275,17 +311,115 @@ func (g *game) Update() error {
 		}
 	}
 
-	for _, eWall := range g.electroWalls {
-		eWall.update()
+	g.checkPlayerInteraction()
+
+	// Update ewall animations
+	if g.eWallBlue != nil {
+		g.eWallBlue.update()
+	}
+	if g.eWallOrange != nil {
+		g.eWallOrange.update()
 	}
 
 	// Update draw options
+	// -------------------
 	const rayHitImageRadius = rayHitImageWidth / 2.0
 
 	drawOptionsZero = cam.GetTranslation(0, 0)
 	drawOptionsRayHit = *cam.GetTranslation(g.rayHitInfo.Point.X-rayHitImageRadius, g.rayHitInfo.Point.Y-rayHitImageRadius)
 
+	// Blue arrow
+	direction := g.terminalBlue.pos.Sub(g.player.pos)
+	distance := direction.LengthSq()
+	if distance < 10*screenWidth {
+		showArrowBlue = false
+	} else if g.terminalIntro.triggered && !g.terminalBlue.triggered {
+		showArrowBlue = true
+		dirAngle := math.Atan2(direction.Y, direction.X)
+		drawOptionsArrowBlue.Rotate = dirAngle
+		drawOptionsArrowBlue.X = screenWidth/2.0 + uiArrowDistance*math.Cos(dirAngle)
+		drawOptionsArrowBlue.Y = screenHeight/2.0 + uiArrowDistance*math.Sin(dirAngle)
+	}
+
+	// Orange arrow
+	direction = g.terminalOrange.pos.Sub(g.player.pos)
+	distance = direction.LengthSq()
+	if distance < 10*screenWidth {
+		showArrowOrange = false
+	} else if g.terminalIntro.triggered && !g.terminalOrange.triggered {
+		showArrowOrange = true
+		dirAngle := math.Atan2(direction.Y, direction.X)
+		drawOptionsArrowOrange.Rotate = dirAngle
+		drawOptionsArrowOrange.X = screenWidth/2.0 + uiArrowDistance*math.Cos(dirAngle)
+		drawOptionsArrowOrange.Y = screenHeight/2.0 + uiArrowDistance*math.Sin(dirAngle)
+	}
+
 	return nil
+}
+
+func (g *game) checkPlayerInteraction() {
+	if !g.input.activate {
+		return
+	}
+
+	interactionRadius := float64(interactionRadiusTile * tileLength)
+	// Check if near intro terminal
+	if g.terminalIntro.pos.Distance(g.player.pos) < interactionRadius {
+		showTextIntro = true
+
+		go func() {
+			timer := time.NewTimer(time.Second * durationTextIntroSec)
+			<-timer.C
+			showTextIntro = false
+			showArrowBlue = true
+			showArrowOrange = true
+			g.terminalIntro.trigger()
+		}()
+	}
+
+	// Check if near blue terminal
+	if g.terminalBlue.pos.Distance(g.player.pos) < interactionRadius {
+
+		showTextTerminalBlue = true
+		go func() {
+			timer := time.NewTimer(time.Second * durationTextTerminals)
+			<-timer.C
+			showTextTerminalBlue = false
+			g.terminalBlue.trigger()
+
+			// Remove wall
+			g.space.RemoveShape(g.eWallBlue.shape)
+			g.space.RemoveBody(g.eWallBlue.shape.Body())
+			g.eWallBlue = nil
+
+		}()
+
+	}
+
+	// Check if near orange terminal
+	if g.terminalOrange.pos.Distance(g.player.pos) < interactionRadius {
+
+		showTextTerminalOrange = true
+		go func() {
+			timer := time.NewTimer(time.Second * durationTextTerminals)
+			<-timer.C
+			showTextTerminalOrange = false
+			g.terminalOrange.trigger()
+
+			// Remove wall
+			g.space.RemoveShape(g.eWallOrange.shape)
+			g.space.RemoveBody(g.eWallOrange.shape.Body())
+			g.eWallOrange = nil
+
+		}()
+
+	}
+
+	// Check if near the button
+	if g.button.pos.Distance(g.player.pos) < interactionRadius {
+		g.button.trigger()
+		showTextButton = true
+	}
 }
 
 func (g *game) updateSettings() {
@@ -369,9 +503,9 @@ func (g *game) Draw(screen *ebiten.Image) {
 	cam.Surface.DrawImage(imageDecorations, drawOptionsZero)
 
 	// Draw terminals
-	for _, terminal := range g.terminals {
-		terminal.draw()
-	}
+	g.terminalIntro.draw()
+	g.terminalBlue.draw()
+	g.terminalOrange.draw()
 
 	// Draw enemies
 	for _, enemy := range g.enemies {
@@ -382,9 +516,15 @@ func (g *game) Draw(screen *ebiten.Image) {
 	g.rocketManager.draw()
 
 	// Draw electric walls
-	for _, eWall := range g.electroWalls {
-		eWall.draw()
+	if g.eWallBlue != nil {
+		g.eWallBlue.draw()
 	}
+	if g.eWallOrange != nil {
+		g.eWallOrange.draw()
+	}
+
+	// Draw the button
+	g.button.draw()
 
 	cam.Surface.DrawImage(imageObjects, drawOptionsZero)
 
@@ -395,7 +535,7 @@ func (g *game) Draw(screen *ebiten.Image) {
 	cam.Surface.DrawImage(imagePlatforms, drawOptionsZero)
 
 	// Draw crosshair
-	cam.Surface.DrawImage(imageCursor, &drawOptionsCursor)
+	cam.Surface.DrawImage(imageCrosshair, &drawOptionsCursor)
 
 	// Draw rayhit
 	var imageHit *ebiten.Image
@@ -410,6 +550,31 @@ func (g *game) Draw(screen *ebiten.Image) {
 
 	cam.Blit(screen)
 
+	if showTextIntro {
+		screen.DrawImage(imageTextIntro, &drawOptionsTextIntro)
+	}
+
+	if showTextTerminalBlue {
+		screen.DrawImage(imageTextTerminalBlue, &drawOptionsTextTerminalBlue)
+	}
+
+	if showTextTerminalOrange {
+		screen.DrawImage(imageTextTerminalOrange, &drawOptionsTextTerminalOrange)
+	}
+
+	if showTextButton {
+		screen.DrawImage(imageTextButton, &drawOptionsTextButton)
+	}
+
+	if showArrowBlue {
+		spriteArrows.Draw(screen, 1, &drawOptionsArrowBlue)
+
+	}
+
+	if showArrowOrange {
+		spriteArrows.Draw(screen, 0, &drawOptionsArrowOrange)
+	}
+
 	// Print fps
 	ebitenutil.DebugPrint(screen, fmt.Sprintf("TPS: %.2f  FPS: %.2f", ebiten.CurrentTPS(), ebiten.CurrentFPS()))
 	// ebitenutil.DebugPrintAt(screen, fmt.Sprintf("X: %.0f, Y: %.0f", g.input.cursorPos.X, g.input.cursorPos.Y), 0, 15)
@@ -419,7 +584,7 @@ func (g *game) Draw(screen *ebiten.Image) {
 // If you don't have to adjust the screen size with the outside size, just return a fixed size.
 func (g *game) Layout(outsideWidth, outsideHeight int) (int, int) {
 	// return outsideWidth, outsideHeight
-	return cameraWidth, cameraHeight
+	return screenWidth, screenHeight
 }
 
 func main() {

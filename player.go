@@ -50,7 +50,7 @@ const (
 )
 
 const (
-	gunRange     = cameraWidth + cameraHeight
+	gunRange     = mapWidth
 	gunForceMult = 15
 	gunForceMax  = 750
 	gunMinAlpha  = 1e-5 // required to prevent player pos to go NaN

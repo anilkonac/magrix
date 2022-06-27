@@ -14,6 +14,8 @@ type input struct {
 	attract bool
 	repel   bool
 
+	activate bool
+
 	escape           bool
 	pausePlay        bool
 	wheelDx, wheelDy float64
@@ -32,6 +34,8 @@ func (i *input) update() {
 
 	i.attract = ebiten.IsMouseButtonPressed(ebiten.MouseButtonRight)
 	i.repel = ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft)
+
+	i.activate = inpututil.IsKeyJustPressed(ebiten.KeyE)
 
 	i.escape = ebiten.IsKeyPressed(ebiten.KeyEscape)
 	i.pausePlay = inpututil.IsKeyJustPressed(ebiten.KeyP) || inpututil.IsKeyJustPressed(ebiten.KeyPause)
