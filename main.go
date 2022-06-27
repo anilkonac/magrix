@@ -137,6 +137,7 @@ type game struct {
 	input         input
 	rayHitInfo    cp.SegmentQueryInfo
 	rocketManager rocketManager
+	electroWalls  []*electricWall
 }
 
 func newGame() *game {
@@ -164,12 +165,18 @@ func newGame() *game {
 
 func (g *game) loadMap(gameMap *tiled.Map) {
 	const (
-		objectGroupWalls  = 0
-		objectGroupPlayer = 1
-		objectGroupEnemy  = 2
+		objectGroupWalls         = 0
+		objectGroupPlayer        = 1
+		objectGroupEnemy         = 2
+		objectGroupWallsElectric = 3
 	)
 
 	g.addWalls(gameMap.ObjectGroups[objectGroupWalls].Objects)
+
+	// Add Electric Walls
+	for _, objectElect := range gameMap.ObjectGroups[objectGroupWallsElectric].Objects {
+		g.electroWalls = append(g.electroWalls, newElectricWall(objectElect, g.space))
+	}
 
 	var playerStartLoc cp.Vector
 	playerStartLoc.X = gameMap.ObjectGroups[objectGroupPlayer].Objects[0].X
@@ -273,6 +280,10 @@ func (g *game) Update() error {
 		}
 	}
 
+	for _, eWall := range g.electroWalls {
+		eWall.update()
+	}
+
 	// Update draw options
 	const rayHitImageRadius = rayHitImageWidth / 2.0
 
@@ -374,6 +385,11 @@ func (g *game) Draw(screen *ebiten.Image) {
 
 	// Draw rockets
 	g.rocketManager.draw()
+
+	// Draw electric walls
+	for _, eWall := range g.electroWalls {
+		eWall.draw()
+	}
 
 	cam.Surface.DrawImage(imageObjects, drawOptionsZero)
 

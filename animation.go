@@ -18,6 +18,7 @@ const (
 	durationPlayerIdleMs    = 200
 	durationPlayerWalkingMs = 75
 	durationExplosionMs     = 50
+	durationElectricMs      = 60
 	numFramesExplosion      = 14
 )
 
@@ -36,14 +37,20 @@ var (
 	bytesRocket []byte
 	//go:embed assets/Explosion_duplicateframes.png
 	bytesExplosion []byte
+	//go:embed assets/anim_electric_blue.png
+	bytesElectricBlue []byte
+	//go:embed assets/anim_electric_orange.png
+	bytesElectricOrange []byte
 )
 
 var (
-	animEnemy1Idle *ganim8.Animation
-	animPlayerIdle *ganim8.Animation
-	animPlayerWalk *ganim8.Animation
-	animRocket     *ganim8.Animation
-	animExplosion  *ganim8.Animation
+	animEnemy1Idle     *ganim8.Animation
+	animPlayerIdle     *ganim8.Animation
+	animPlayerWalk     *ganim8.Animation
+	animRocket         *ganim8.Animation
+	animExplosion      *ganim8.Animation
+	animElectricBlue   *ganim8.Animation
+	animElectricOrange *ganim8.Animation
 )
 
 func init() {
@@ -52,6 +59,8 @@ func init() {
 	animEnemy1Idle = newAnim("1-4", 1, byteseEemy1Idle, gridWidth, gridHeight, 64, 32, durationEnemy1IdleMs)
 	animRocket = newAnim("1-2", 1, bytesRocket, 16, 16, 32, 16, 50)
 	animExplosion = newAnim("1-14", 1, bytesExplosion, 32, 32, 32*numFramesExplosion, 32, durationExplosionMs)
+	animElectricBlue = newAnim("1-3", 1, bytesElectricBlue, 16, 16, 48, 16, durationElectricMs)
+	animElectricOrange = newAnim("1-3", 1, bytesElectricOrange, 16, 16, 48, 16, durationElectricMs)
 }
 
 func newAnim(column string, row int, fileBytes []byte, gridWidth, gridHeight, imageWidth, imageHeight, frameDurationMs int) *ganim8.Animation {

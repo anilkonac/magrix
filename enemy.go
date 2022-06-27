@@ -40,8 +40,8 @@ func newEnemy(pos cp.Vector, space *cp.Space, turnedLeft bool) *enemy {
 		drawOptions: ganim8.DrawOptions{
 			OriginX: 0.5,
 			OriginY: 0.64,
-			ScaleX:  1.00,
-			ScaleY:  1.00,
+			ScaleX:  1.0,
+			ScaleY:  1.0,
 		},
 		curAnim:           *animEnemy1Idle,
 		attackCooldownSec: 0,
@@ -104,31 +104,3 @@ func (e *enemy) draw() {
 func enemyUpdateVelocity(body *cp.Body, gravity cp.Vector, damping, dt float64) {
 	body.UpdateVelocity(gravity, damping, dt)
 }
-
-// Broken
-// // Goroutine
-// func (e *enemy) standUpBot() {
-// 	const standUpForceY = -8000
-// 	const standUpAngularVelocity = -4
-// 	const checkIntervalSec = 3.0
-// 	const checkEpsilon = 1.0
-
-// 	vForce := cp.Vector{X: 0, Y: standUpForceY}
-
-// 	ticker := time.NewTicker(time.Second * checkIntervalSec)
-// 	for range ticker.C {
-// 		if gamePaused {
-// 			continue
-// 		}
-// 		angleDeg := e.body.Angle() * cp.DegreeConst
-// 		angleDegMod := math.Mod(angleDeg, 180)
-
-// 		if math.Abs(angleDegMod-90) < checkEpsilon {
-// 			e.body.SetAngularVelocity(standUpAngularVelocity)
-// 			e.body.SetForce(vForce)
-// 		} else if math.Abs(angleDegMod+90) < checkEpsilon {
-// 			e.body.SetAngularVelocity(-standUpAngularVelocity)
-// 			e.body.SetForce(vForce)
-// 		}
-// 	}
-// }
