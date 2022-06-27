@@ -21,8 +21,6 @@ import (
 )
 
 const (
-	cameraWidth  = 960
-	cameraHeight = 720
 	screenWidth  = 960
 	screenHeight = 720
 	deltaTimeSec = 1.0 / 60.0
@@ -43,11 +41,10 @@ const (
 const mapPath = "assets/gameMap.tmx"
 
 const (
-	zoomMultiplier  = 0.1
-	uiArrowDistance = screenHeight/2.0 - 50
+	zoomMultiplier        = 0.1
+	uiArrowDistance       = screenHeight/2.0 - 50
+	interactionRadiusTile = 1.25
 )
-
-const interactionRadiusTile = 1
 
 var (
 	colorBackground = color.RGBA{38, 38, 38, 255}
@@ -58,6 +55,7 @@ var (
 	colorPlayer     = color.RGBA{155, 201, 149, 255} // ~ Dark Sea Green
 	colorCrosshair  = color.RGBA{255, 251, 255, 255} // ~ Snow
 	colorEnemy      = color.RGBA{165, 1, 4, 255}     // ~ Rufous
+	colorGreen      = color.RGBA{0, 231, 86, 255}
 )
 
 var (
@@ -163,6 +161,7 @@ type game struct {
 	terminalIntro  *terminal
 	eWallBlue      *electricWall
 	eWallOrange    *electricWall
+	button         *button
 }
 
 func newGame() *game {
@@ -202,6 +201,7 @@ func (g *game) loadMap(gameMap *tiled.Map) {
 		objectGroupEnemy         = 2
 		objectGroupWallsElectric = 3
 		objectGroupTerminals     = 4
+		objectGroupButton        = 5
 	)
 
 	g.addWalls(gameMap.ObjectGroups[objectGroupWalls].Objects)
@@ -212,6 +212,7 @@ func (g *game) loadMap(gameMap *tiled.Map) {
 
 	// Add terminals
 	g.terminalIntro = newTerminal(gameMap.ObjectGroups[objectGroupTerminals].Objects[2], g.space)
+	g.terminalIntro.spr = spriteTerminalGreen
 	g.terminalBlue = newTerminal(gameMap.ObjectGroups[objectGroupTerminals].Objects[0], g.space)
 	g.terminalOrange = newTerminal(gameMap.ObjectGroups[objectGroupTerminals].Objects[1], g.space)
 
@@ -225,6 +226,9 @@ func (g *game) loadMap(gameMap *tiled.Map) {
 		g.enemies = append(g.enemies, newEnemy(cp.Vector{X: enemyPos.X, Y: enemyPos.Y}, g.space, enemyPos.Properties.GetBool("turnedLeft")))
 
 	}
+
+	// Add the button
+	g.button = newButton(gameMap.ObjectGroups[objectGroupButton].Objects[0], g.space)
 
 	const (
 		layerPlatform    = 1
@@ -363,6 +367,10 @@ func (g *game) Update() error {
 		}
 
 		// Check if near the button
+		if g.button.pos.Distance(g.player.pos) < interactionRadius {
+			g.button.trigger()
+			showTextButton = true
+		}
 	}
 
 	// Update ewall animations
@@ -510,6 +518,9 @@ func (g *game) Draw(screen *ebiten.Image) {
 		g.eWallOrange.draw()
 	}
 
+	// Draw the button
+	g.button.draw()
+
 	cam.Surface.DrawImage(imageObjects, drawOptionsZero)
 
 	// Draw player and its gun
@@ -546,6 +557,10 @@ func (g *game) Draw(screen *ebiten.Image) {
 		screen.DrawImage(imageTextTerminalOrange, &drawOptionsTextTerminalOrange)
 	}
 
+	if showTextButton {
+		screen.DrawImage(imageTextButton, &drawOptionsTextButton)
+	}
+
 	if showArrowBlue {
 		spriteArrows.Draw(screen, 1, &drawOptionsArrowBlue)
 
@@ -564,7 +579,7 @@ func (g *game) Draw(screen *ebiten.Image) {
 // If you don't have to adjust the screen size with the outside size, just return a fixed size.
 func (g *game) Layout(outsideWidth, outsideHeight int) (int, int) {
 	// return outsideWidth, outsideHeight
-	return cameraWidth, cameraHeight
+	return screenWidth, screenHeight
 }
 
 func main() {

@@ -12,9 +12,11 @@ import (
 const (
 	dpi                   = 72
 	fontSizeIntro         = 20
-	textIntro             = "Loading the locations of terminals that lift plasma gates..."
+	fontSizeButton        = 48
+	textIntro             = "Locating terminals that lift plasma gates..."
 	textTerminalBlue      = "Lifting the blue plasma gate"
 	textTerminalOrange    = "Lifting the orange plasma gate"
+	textButton            = "Mission Accomplished!"
 	durationTextIntroSec  = 3.0
 	durationTextTerminals = 2.0
 	introTextShiftY       = screenHeight / 4.0
@@ -24,9 +26,11 @@ var (
 	//go:embed assets/fonts/Minecraft.ttf
 	bytesFontMinecraft            []byte
 	fontFaceIntro                 font.Face
+	fontFaceButton                font.Face
 	showTextIntro                 bool
 	showTextTerminalBlue          bool
 	showTextTerminalOrange        bool
+	showTextButton                bool
 	imageTextIntro                *ebiten.Image
 	imageTextTerminalBlue         *ebiten.Image
 	imageTextTerminalOrange       *ebiten.Image
@@ -34,6 +38,7 @@ var (
 	drawOptionsTextIntro          ebiten.DrawImageOptions
 	drawOptionsTextTerminalBlue   ebiten.DrawImageOptions
 	drawOptionsTextTerminalOrange ebiten.DrawImageOptions
+	drawOptionsTextButton         ebiten.DrawImageOptions
 )
 
 func init() {
@@ -47,11 +52,18 @@ func init() {
 	})
 	panicErr(err)
 
+	fontFaceButton, err = opentype.NewFace(tt, &opentype.FaceOptions{
+		Size:    fontSizeButton,
+		DPI:     dpi,
+		Hinting: font.HintingFull,
+	})
+	panicErr(err)
+
 	// Prepare intro text
 	boundText := text.BoundString(fontFaceIntro, textIntro)
 	boundTextSize := boundText.Size()
 	imageTextIntro = ebiten.NewImage(boundTextSize.X, boundTextSize.Y)
-	text.Draw(imageTextIntro, textIntro, fontFaceIntro, -boundText.Min.X, -boundText.Min.Y, colorOrange)
+	text.Draw(imageTextIntro, textIntro, fontFaceIntro, -boundText.Min.X, -boundText.Min.Y, colorGreen)
 	drawOptionsTextIntro.GeoM.Reset()
 	drawOptionsTextIntro.GeoM.Translate(
 		float64((screenWidth-boundTextSize.X)/2.0-boundText.Min.X),
@@ -74,6 +86,16 @@ func init() {
 	text.Draw(imageTextTerminalOrange, textTerminalOrange, fontFaceIntro, -boundText.Min.X, -boundText.Min.Y, colorOrange)
 	drawOptionsTextTerminalOrange.GeoM.Reset()
 	drawOptionsTextTerminalOrange.GeoM.Translate(
+		float64((screenWidth-boundTextSize.X)/2.0-boundText.Min.X),
+		float64((screenHeight-boundTextSize.Y)/2.0-boundText.Min.Y)+introTextShiftY)
+
+	// Prepare final(button) text
+	boundText = text.BoundString(fontFaceButton, textButton)
+	boundTextSize = boundText.Size()
+	imageTextButton = ebiten.NewImage(boundTextSize.X, boundTextSize.Y)
+	text.Draw(imageTextButton, textButton, fontFaceButton, -boundText.Min.X, -boundText.Min.Y, colorGreen)
+	drawOptionsTextButton.GeoM.Reset()
+	drawOptionsTextButton.GeoM.Translate(
 		float64((screenWidth-boundTextSize.X)/2.0-boundText.Min.X),
 		float64((screenHeight-boundTextSize.Y)/2.0-boundText.Min.Y)+introTextShiftY)
 }
