@@ -311,67 +311,7 @@ func (g *game) Update() error {
 		}
 	}
 
-	// Check player interaction
-	if g.input.activate {
-		interactionRadius := float64(interactionRadiusTile * tileLength)
-		// Check if near intro terminal
-		if g.terminalIntro.pos.Distance(g.player.pos) < interactionRadius {
-			showTextIntro = true
-
-			go func() {
-				timer := time.NewTimer(time.Second * durationTextIntroSec)
-				<-timer.C
-				showTextIntro = false
-				showArrowBlue = true
-				showArrowOrange = true
-				g.terminalIntro.trigger()
-			}()
-		}
-
-		// Check if near blue terminal
-		if g.terminalBlue.pos.Distance(g.player.pos) < interactionRadius {
-
-			showTextTerminalBlue = true
-			go func() {
-				timer := time.NewTimer(time.Second * durationTextTerminals)
-				<-timer.C
-				showTextTerminalBlue = false
-				g.terminalBlue.trigger()
-
-				// Remove wall
-				g.space.RemoveShape(g.eWallBlue.shape)
-				g.space.RemoveBody(g.eWallBlue.shape.Body())
-				g.eWallBlue = nil
-
-			}()
-
-		}
-
-		// Check if near orange terminal
-		if g.terminalOrange.pos.Distance(g.player.pos) < interactionRadius {
-
-			showTextTerminalOrange = true
-			go func() {
-				timer := time.NewTimer(time.Second * durationTextTerminals)
-				<-timer.C
-				showTextTerminalOrange = false
-				g.terminalOrange.trigger()
-
-				// Remove wall
-				g.space.RemoveShape(g.eWallOrange.shape)
-				g.space.RemoveBody(g.eWallOrange.shape.Body())
-				g.eWallOrange = nil
-
-			}()
-
-		}
-
-		// Check if near the button
-		if g.button.pos.Distance(g.player.pos) < interactionRadius {
-			g.button.trigger()
-			showTextButton = true
-		}
-	}
+	g.checkPlayerInteraction()
 
 	// Update ewall animations
 	if g.eWallBlue != nil {
@@ -415,6 +355,71 @@ func (g *game) Update() error {
 	}
 
 	return nil
+}
+
+func (g *game) checkPlayerInteraction() {
+	if !g.input.activate {
+		return
+	}
+
+	interactionRadius := float64(interactionRadiusTile * tileLength)
+	// Check if near intro terminal
+	if g.terminalIntro.pos.Distance(g.player.pos) < interactionRadius {
+		showTextIntro = true
+
+		go func() {
+			timer := time.NewTimer(time.Second * durationTextIntroSec)
+			<-timer.C
+			showTextIntro = false
+			showArrowBlue = true
+			showArrowOrange = true
+			g.terminalIntro.trigger()
+		}()
+	}
+
+	// Check if near blue terminal
+	if g.terminalBlue.pos.Distance(g.player.pos) < interactionRadius {
+
+		showTextTerminalBlue = true
+		go func() {
+			timer := time.NewTimer(time.Second * durationTextTerminals)
+			<-timer.C
+			showTextTerminalBlue = false
+			g.terminalBlue.trigger()
+
+			// Remove wall
+			g.space.RemoveShape(g.eWallBlue.shape)
+			g.space.RemoveBody(g.eWallBlue.shape.Body())
+			g.eWallBlue = nil
+
+		}()
+
+	}
+
+	// Check if near orange terminal
+	if g.terminalOrange.pos.Distance(g.player.pos) < interactionRadius {
+
+		showTextTerminalOrange = true
+		go func() {
+			timer := time.NewTimer(time.Second * durationTextTerminals)
+			<-timer.C
+			showTextTerminalOrange = false
+			g.terminalOrange.trigger()
+
+			// Remove wall
+			g.space.RemoveShape(g.eWallOrange.shape)
+			g.space.RemoveBody(g.eWallOrange.shape.Body())
+			g.eWallOrange = nil
+
+		}()
+
+	}
+
+	// Check if near the button
+	if g.button.pos.Distance(g.player.pos) < interactionRadius {
+		g.button.trigger()
+		showTextButton = true
+	}
 }
 
 func (g *game) updateSettings() {
