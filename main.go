@@ -357,7 +357,7 @@ func (g *game) rayCast() {
 func (g *game) Draw(screen *ebiten.Image) {
 	// screen.Fill(colorBackground)
 	imageTemp.Fill(colorBackground)
-	cam.Surface.Fill(colorBackground)
+	cam.Surface.Fill(color.Black)
 
 	// Draw decorations
 	cam.Surface.DrawImage(imageDecorations, drawOptionsZero)
@@ -367,15 +367,14 @@ func (g *game) Draw(screen *ebiten.Image) {
 	// Draw player and its gun
 	g.player.draw()
 
-	cam.Surface.DrawImage(imageTemp, drawOptionsZero)
-
-	// // Draw enemies
-	// for _, enemy := range g.enemies {
-	// 	enemy.draw()
-	// }
+	// Draw enemies
+	for _, enemy := range g.enemies {
+		enemy.draw()
+	}
 
 	// // Draw rockets
 	// g.rocketManager.draw()
+	cam.Surface.DrawImage(imageTemp, drawOptionsZero)
 
 	// // Draw walls and platforms
 	cam.Surface.DrawImage(imagePlatforms, drawOptionsZero)

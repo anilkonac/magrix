@@ -6,7 +6,6 @@ import (
 	"math"
 	"math/rand"
 
-	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/jakecoffman/cp"
 	"github.com/yohamta/ganim8/v2"
 )
@@ -22,12 +21,9 @@ const (
 	enemyAttackCooldownSec = 2.0
 )
 
-var imageEnemy = ebiten.NewImage(16, 32)
-
 type enemy struct {
 	size              cp.Vector
-	drawOptions       ebiten.DrawImageOptions
-	drawOptionsAnim   ganim8.DrawOptions
+	drawOptions       ganim8.DrawOptions
 	body              *cp.Body
 	shape             *cp.Shape
 	curAnim           ganim8.Animation
@@ -41,9 +37,9 @@ func newEnemy(pos cp.Vector, space *cp.Space, turnedLeft bool) *enemy {
 		size: cp.Vector{
 			X: enemyWidthTile * tileLength,
 			Y: enemyHeightTile * tileLength},
-		drawOptionsAnim: ganim8.DrawOptions{
-			OriginX: 0.0,
-			OriginY: 0.15,
+		drawOptions: ganim8.DrawOptions{
+			OriginX: 0.5,
+			OriginY: 0.64,
 			ScaleX:  1.00,
 			ScaleY:  1.00,
 		},
@@ -52,7 +48,7 @@ func newEnemy(pos cp.Vector, space *cp.Space, turnedLeft bool) *enemy {
 		turnedLeft:        turnedLeft,
 	}
 	if turnedLeft {
-		enemy.drawOptionsAnim.ScaleX = -1.0
+		enemy.drawOptions.ScaleX = -1.0
 	}
 
 	enemy.curAnim.GoToFrame(rand.Intn(4)) // Have all enemies start at different frames
@@ -96,23 +92,13 @@ func (e *enemy) update(force *cp.Vector) {
 
 	// Update draw options
 	e.curAnim.Update(animDeltaTime)
-	e.drawOptions.GeoM.Reset()
-	e.drawOptions.GeoM.Translate(-tileLength/2.0, -tileLength)
-	e.drawOptions.GeoM.Rotate(e.body.Angle())
-	e.drawOptions.GeoM.Concat(cam.GetTranslation(pos.X, pos.Y).GeoM)
-	if e.turnedLeft {
-		e.drawOptionsAnim.ScaleX = -1.0
-		e.drawOptionsAnim.OriginX = 1.0
-	} else {
-		e.drawOptionsAnim.ScaleX = 1.0
-		e.drawOptionsAnim.OriginX = 0.0
-	}
+	e.drawOptions.X = pos.X
+	e.drawOptions.Y = pos.Y
+	e.drawOptions.Rotate = e.body.Angle()
 }
 
 func (e *enemy) draw() {
-	imageEnemy.Clear()
-	e.curAnim.Draw(imageEnemy, &e.drawOptionsAnim)
-	cam.Surface.DrawImage(imageEnemy, &e.drawOptions)
+	e.curAnim.Draw(imageTemp, &e.drawOptions)
 }
 
 func enemyUpdateVelocity(body *cp.Body, gravity cp.Vector, damping, dt float64) {

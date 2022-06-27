@@ -93,22 +93,21 @@ func init() {
 }
 
 type player struct {
-	pos             cp.Vector
-	posGun          cp.Vector
-	size            cp.Vector
-	sizeGun         cp.Vector
-	angleGun        float64
-	shape           *cp.Shape
-	body            *cp.Body
-	drawOptions     ebiten.DrawImageOptions
-	drawOptionsAnim ganim8.DrawOptions
-	drawOptionsGun  ebiten.DrawImageOptions
-	curAnim         *ganim8.Animation
-	onGround        bool
-	gunRay          [2]cp.Vector
-	gunForce        cp.Vector
-	state           playerState
-	stateGun        gunState
+	pos            cp.Vector
+	posGun         cp.Vector
+	size           cp.Vector
+	sizeGun        cp.Vector
+	angleGun       float64
+	shape          *cp.Shape
+	body           *cp.Body
+	drawOptions    ganim8.DrawOptions
+	drawOptionsGun ebiten.DrawImageOptions
+	curAnim        *ganim8.Animation
+	onGround       bool
+	gunRay         [2]cp.Vector
+	gunForce       cp.Vector
+	state          playerState
+	stateGun       gunState
 }
 
 func newPlayer(pos cp.Vector, space *cp.Space) *player {
@@ -122,7 +121,7 @@ func newPlayer(pos cp.Vector, space *cp.Space) *player {
 			X: gunWidthTile * tileLength,
 			Y: gunHeightTile * tileLength,
 		},
-		drawOptionsAnim: ganim8.DrawOptions{
+		drawOptions: ganim8.DrawOptions{
 			OriginX: 0.5,
 			OriginY: 0.6,
 			ScaleX:  1.0,
@@ -255,13 +254,13 @@ func (p *player) handleInputs(input *input, rayHitInfo *cp.SegmentQueryInfo) {
 }
 
 func (p *player) updateDrawOptions() {
-	p.drawOptionsAnim.X = p.pos.X
-	p.drawOptionsAnim.Y = p.pos.Y
+	p.drawOptions.X = p.pos.X
+	p.drawOptions.Y = p.pos.Y
 	// Player
 	if p.angleGun < -halfPi || p.angleGun > halfPi {
-		p.drawOptionsAnim.ScaleX = -1.0
+		p.drawOptions.ScaleX = -1.0
 	} else {
-		p.drawOptionsAnim.ScaleX = 1.0
+		p.drawOptions.ScaleX = 1.0
 
 	}
 
@@ -274,7 +273,7 @@ func (p *player) updateDrawOptions() {
 
 func (p *player) draw() {
 	// Draw player
-	p.curAnim.Draw(imageTemp, &p.drawOptionsAnim)
+	p.curAnim.Draw(imageTemp, &p.drawOptions)
 
 	// Draw gun
 	if p.stateGun == gunStateAttract {
