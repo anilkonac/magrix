@@ -3,7 +3,6 @@ package main
 import (
 	"math"
 
-	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/jakecoffman/cp"
 	"github.com/yohamta/ganim8/v2"
 )
@@ -24,7 +23,7 @@ type explosion struct {
 }
 
 func newExplosion(pos cp.Vector) *explosion {
-	return &explosion{
+	explo := &explosion{
 		drawOptions: ganim8.DrawOptions{
 			X:       pos.X,
 			Y:       pos.Y,
@@ -35,6 +34,8 @@ func newExplosion(pos cp.Vector) *explosion {
 		},
 		animation: *animExplosion,
 	}
+
+	return explo
 }
 
 type rocket struct {
@@ -114,8 +115,8 @@ func (m *rocketManager) update( /*playerPos *cp.Vector*/ ) (hitBodies []*cp.Body
 		rocket.body.SetForce(cp.Vector{X: 0, Y: -gravity * rocketMass /* * velocityPercent*/})
 	}
 
-	// // TODO: Object pooling?
-	// // Delete hit rockets
+	// TODO: Object pooling?
+	// Delete hit rockets
 	for iRocket, rocket := range m.rockets {
 		for _, rocketTarget := range rocketsToBeDeleted {
 			if rocket == rocketTarget {
@@ -160,16 +161,15 @@ func (m *rocketManager) update( /*playerPos *cp.Vector*/ ) (hitBodies []*cp.Body
 	return
 }
 
-func (m *rocketManager) draw(dst *ebiten.Image) {
+func (m *rocketManager) draw() {
 	// Draw rockets
 	for _, rocket := range m.rockets {
-		animRocket.Draw(dst, &rocket.drawOptions)
+		animRocket.Draw(imageObjects, &rocket.drawOptions)
 	}
 
 	// Draw explosions
 	for _, explo := range m.explosions {
-		explo.animation.Draw(dst, &explo.drawOptions)
-
+		explo.animation.Draw(imageObjects, &explo.drawOptions)
 	}
 }
 

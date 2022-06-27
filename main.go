@@ -15,14 +15,17 @@ import (
 	"github.com/jakecoffman/cp"
 	"github.com/lafriks/go-tiled"
 	"github.com/lafriks/go-tiled/render"
+	camera "github.com/melonfunction/ebiten-camera"
 )
 
 const (
-	cameraWidth  = 320
-	cameraHeight = 240
+	cameraWidth  = 960
+	cameraHeight = 720
 	screenWidth  = 960
 	screenHeight = 720
 	deltaTimeSec = 1.0 / 60.0
+	mapWidth     = 960
+	mapHeight    = 960
 )
 
 const (
@@ -33,6 +36,10 @@ const (
 	wallFriction         = 1
 	// spaceIterations      = 10
 )
+
+const mapPath = "assets/gameMap.tmx"
+
+const zoomMultiplier = 0.1
 
 var (
 	colorBackground = color.RGBA{38, 38, 38, 255}
@@ -53,15 +60,21 @@ var (
 	imageRayHitRepel   = ebiten.NewImage(rayHitImageWidth, rayHitImageWidth)
 	drawOptionsCursor  ebiten.DrawImageOptions
 	drawOptionsRayHit  ebiten.DrawImageOptions
+	drawOptionsZero    *ebiten.DrawImageOptions
 	tileLength         float64
 )
 
-const mapPath = "assets/testLevel.tmx"
+var (
+	imagePlatforms     *ebiten.Image
+	imageInteractables *ebiten.Image
+	imageComputers     *ebiten.Image
+	imageDecorations   *ebiten.Image
+	imageObjects       *ebiten.Image = ebiten.NewImage(mapWidth, mapHeight)
+)
 
 var (
-	imagePlatforms   *ebiten.Image
-	imageComputers   *ebiten.Image
-	imageDecorations *ebiten.Image
+	cam              = camera.NewCamera(screenWidth, screenHeight, 0, 0, 0, 1)
+	cursorX, cursorY float64
 )
 
 var gamePaused bool
@@ -124,6 +137,8 @@ type game struct {
 	input         input
 	rayHitInfo    cp.SegmentQueryInfo
 	rocketManager rocketManager
+	electroWalls  []*electricWall
+	terminals     []*terminal
 }
 
 func newGame() *game {
@@ -137,12 +152,12 @@ func newGame() *game {
 	tileLength = float64(gameMap.TileWidth)
 
 	game := &game{
-		player: *newPlayer(cp.Vector{X: cameraWidth / 2.0, Y: cameraHeight / 2.0}, space),
-		space:  space,
+		space: space,
 		rocketManager: rocketManager{
 			space: space,
 		},
 	}
+	cam.Zoom(2.0)
 
 	game.loadMap(gameMap)
 
@@ -151,34 +166,54 @@ func newGame() *game {
 
 func (g *game) loadMap(gameMap *tiled.Map) {
 	const (
-		objectGroupWalls = 0
-		objectGroupEnemy = 1
+		objectGroupWalls         = 0
+		objectGroupPlayer        = 1
+		objectGroupEnemy         = 2
+		objectGroupWallsElectric = 3
+		objectGroupTerminals     = 4
 	)
+
+	g.addWalls(gameMap.ObjectGroups[objectGroupWalls].Objects)
+
+	// Add Electric Walls
+	for _, objectElect := range gameMap.ObjectGroups[objectGroupWallsElectric].Objects {
+		g.electroWalls = append(g.electroWalls, newElectricWall(objectElect, g.space))
+	}
+
+	// Add terminals
+	for _, objectTerm := range gameMap.ObjectGroups[objectGroupTerminals].Objects {
+		g.terminals = append(g.terminals, newTerminal(objectTerm, g.space))
+	}
+
+	var playerStartLoc cp.Vector
+	playerStartLoc.X = gameMap.ObjectGroups[objectGroupPlayer].Objects[0].X
+	playerStartLoc.Y = gameMap.ObjectGroups[objectGroupPlayer].Objects[0].Y
+	g.player = *newPlayer(playerStartLoc, g.space)
+
 	// Add enemies
 	for _, enemyPos := range gameMap.ObjectGroups[objectGroupEnemy].Objects {
 		g.enemies = append(g.enemies, newEnemy(cp.Vector{X: enemyPos.X, Y: enemyPos.Y}, g.space, enemyPos.Properties.GetBool("turnedLeft")))
 
 	}
 
-	g.addWalls(gameMap.ObjectGroups[objectGroupWalls].Objects)
+	const (
+		layerPlatform    = 1
+		layerDecorations = 0
+	)
 
 	// Render layer images
 	renderer, err := render.NewRenderer(gameMap)
 	panicErr(err)
 
-	err = renderer.RenderLayer(0)
+	err = renderer.RenderLayer(layerPlatform)
+	panicErr(err)
+	imagePlatforms = ebiten.NewImageFromImage(renderer.Result)
+
+	renderer.Clear()
+	err = renderer.RenderLayer(layerDecorations)
 	panicErr(err)
 	imageDecorations = ebiten.NewImageFromImage(renderer.Result)
 
-	renderer.Clear()
-	err = renderer.RenderLayer(1)
-	panicErr(err)
-	imageComputers = ebiten.NewImageFromImage(renderer.Result)
-
-	renderer.Clear()
-	err = renderer.RenderLayer(2)
-	panicErr(err)
-	imagePlatforms = ebiten.NewImageFromImage(renderer.Result)
 }
 
 func (g *game) addWalls(wallObjects []*tiled.Object) {
@@ -197,8 +232,13 @@ func (g *game) addWalls(wallObjects []*tiled.Object) {
 // Update is called every tick (1/60 [s] by default).
 func (g *game) Update() error {
 	g.input.update()
-	drawOptionsCursor.GeoM.Reset()
-	drawOptionsCursor.GeoM.Translate(g.input.cursorPos.X-crosshairRadius, g.input.cursorPos.Y-crosshairRadius)
+	if g.input.wheelDy > 0 {
+		cam.Zoom(1.0 + zoomMultiplier)
+	} else if g.input.wheelDy < 0 {
+		cam.Zoom(1.0 - zoomMultiplier)
+	}
+	cursorX, cursorY = cam.GetCursorCoords()
+	drawOptionsCursor = *cam.GetTranslation(cursorX-crosshairRadius, cursorY-crosshairRadius)
 
 	g.updateSettings()
 
@@ -213,6 +253,7 @@ func (g *game) Update() error {
 
 	// Update player and player's gun
 	g.player.update(&g.input, &g.rayHitInfo)
+	cam.SetPosition(g.player.pos.X, g.player.pos.Y)
 
 	// Send the negative of the player's gun force to the rocket
 	var force cp.Vector
@@ -234,11 +275,15 @@ func (g *game) Update() error {
 		}
 	}
 
-	// Update geometry matrices
+	for _, eWall := range g.electroWalls {
+		eWall.update()
+	}
+
+	// Update draw options
 	const rayHitImageRadius = rayHitImageWidth / 2.0
 
-	drawOptionsRayHit.GeoM.Reset()
-	drawOptionsRayHit.GeoM.Translate(g.rayHitInfo.Point.X-rayHitImageRadius, g.rayHitInfo.Point.Y-rayHitImageRadius)
+	drawOptionsZero = cam.GetTranslation(0, 0)
+	drawOptionsRayHit = *cam.GetTranslation(g.rayHitInfo.Point.X-rayHitImageRadius, g.rayHitInfo.Point.Y-rayHitImageRadius)
 
 	return nil
 }
@@ -316,28 +361,41 @@ func (g *game) rayCast() {
 
 // Draw is called every frame (typically 1/60[s] for 60Hz display).
 func (g *game) Draw(screen *ebiten.Image) {
-	screen.Fill(colorBackground)
+	// screen.Fill(colorBackground)
+	imageObjects.Clear()
+	cam.Surface.Fill(colorBackground)
 
 	// Draw decorations
-	screen.DrawImage(imageDecorations, &ebiten.DrawImageOptions{})
-	screen.DrawImage(imageComputers, &ebiten.DrawImageOptions{})
+	cam.Surface.DrawImage(imageDecorations, drawOptionsZero)
 
-	// Draw player and its gun
-	g.player.draw(screen)
+	// Draw terminals
+	for _, terminal := range g.terminals {
+		terminal.draw()
+	}
 
 	// Draw enemies
 	for _, enemy := range g.enemies {
-		enemy.draw(screen)
+		enemy.draw()
 	}
 
 	// Draw rockets
-	g.rocketManager.draw(screen)
+	g.rocketManager.draw()
+
+	// Draw electric walls
+	for _, eWall := range g.electroWalls {
+		eWall.draw()
+	}
+
+	cam.Surface.DrawImage(imageObjects, drawOptionsZero)
+
+	// Draw player and its gun
+	g.player.draw()
 
 	// Draw walls and platforms
-	screen.DrawImage(imagePlatforms, &ebiten.DrawImageOptions{})
+	cam.Surface.DrawImage(imagePlatforms, drawOptionsZero)
 
 	// Draw crosshair
-	screen.DrawImage(imageCursor, &drawOptionsCursor)
+	cam.Surface.DrawImage(imageCursor, &drawOptionsCursor)
 
 	// Draw rayhit
 	var imageHit *ebiten.Image
@@ -348,7 +406,9 @@ func (g *game) Draw(screen *ebiten.Image) {
 	} else {
 		imageHit = imageRayHit
 	}
-	screen.DrawImage(imageHit, &drawOptionsRayHit)
+	cam.Surface.DrawImage(imageHit, &drawOptionsRayHit)
+
+	cam.Blit(screen)
 
 	// Print fps
 	ebitenutil.DebugPrint(screen, fmt.Sprintf("TPS: %.2f  FPS: %.2f", ebiten.CurrentTPS(), ebiten.CurrentFPS()))
