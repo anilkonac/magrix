@@ -74,7 +74,6 @@ var (
 	imageGunIdle    *ebiten.Image
 	imageGunAttract *ebiten.Image
 	imageGunRepel   *ebiten.Image
-	imagePlayer     *ebiten.Image
 )
 
 var posGunRelative cp.Vector
@@ -91,8 +90,6 @@ func init() {
 	img, err = png.Decode(bytes.NewReader(gunRepelBytes))
 	panicErr(err)
 	imageGunRepel = ebiten.NewImageFromImage(img)
-
-	imagePlayer = ebiten.NewImage(16, 32)
 }
 
 type player struct {
@@ -126,8 +123,8 @@ func newPlayer(pos cp.Vector, space *cp.Space) *player {
 			Y: gunHeightTile * tileLength,
 		},
 		drawOptionsAnim: ganim8.DrawOptions{
-			OriginX: 0.0,
-			OriginY: 0.1,
+			OriginX: 0.5,
+			OriginY: 0.6,
 			ScaleX:  1.0,
 			ScaleY:  1.0,
 		},
@@ -258,14 +255,13 @@ func (p *player) handleInputs(input *input, rayHitInfo *cp.SegmentQueryInfo) {
 }
 
 func (p *player) updateDrawOptions() {
-	p.drawOptions = *cam.GetTranslation(p.pos.X-tileLength/2.0, p.pos.Y-tileLength)
+	p.drawOptionsAnim.X = p.pos.X
+	p.drawOptionsAnim.Y = p.pos.Y
 	// Player
 	if p.angleGun < -halfPi || p.angleGun > halfPi {
 		p.drawOptionsAnim.ScaleX = -1.0
-		p.drawOptionsAnim.OriginX = 1.0
 	} else {
 		p.drawOptionsAnim.ScaleX = 1.0
-		p.drawOptionsAnim.OriginX = 0.0
 
 	}
 
@@ -273,22 +269,20 @@ func (p *player) updateDrawOptions() {
 	p.drawOptionsGun.GeoM.Reset()
 	p.drawOptionsGun.GeoM.Translate(0, -p.sizeGun.Y/2.0)
 	p.drawOptionsGun.GeoM.Rotate(p.angleGun)
-	p.drawOptionsGun.GeoM.Concat(cam.GetTranslation(p.posGun.X, p.posGun.Y).GeoM)
+	p.drawOptionsGun.GeoM.Translate(p.posGun.X, p.posGun.Y)
 }
 
 func (p *player) draw() {
 	// Draw player
-	imagePlayer.Clear()
-	p.curAnim.Draw(imagePlayer, &p.drawOptionsAnim)
-	cam.Surface.DrawImage(imagePlayer, &p.drawOptions)
+	p.curAnim.Draw(imageTemp, &p.drawOptionsAnim)
 
 	// Draw gun
 	if p.stateGun == gunStateAttract {
-		cam.Surface.DrawImage(imageGunAttract, &p.drawOptionsGun)
+		imageTemp.DrawImage(imageGunAttract, &p.drawOptionsGun)
 	} else if p.stateGun == gunStateRepel {
-		cam.Surface.DrawImage(imageGunRepel, &p.drawOptionsGun)
+		imageTemp.DrawImage(imageGunRepel, &p.drawOptionsGun)
 	} else {
-		cam.Surface.DrawImage(imageGunIdle, &p.drawOptionsGun)
+		imageTemp.DrawImage(imageGunIdle, &p.drawOptionsGun)
 	}
 
 	// ebitenutil.DrawLine(dst, p.gunRay[0].X, p.gunRay[0].Y, p.gunRay[1].X, p.gunRay[1].Y, colorCrosshair)

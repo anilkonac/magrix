@@ -24,6 +24,8 @@ const (
 	screenWidth  = 960
 	screenHeight = 720
 	deltaTimeSec = 1.0 / 60.0
+	mapWidth     = 960
+	mapHeight    = 960
 )
 
 const (
@@ -67,6 +69,7 @@ var (
 	imageInteractables *ebiten.Image
 	imageComputers     *ebiten.Image
 	imageDecorations   *ebiten.Image
+	imageTemp          *ebiten.Image = ebiten.NewImage(mapWidth, mapHeight)
 )
 
 var (
@@ -353,6 +356,7 @@ func (g *game) rayCast() {
 // Draw is called every frame (typically 1/60[s] for 60Hz display).
 func (g *game) Draw(screen *ebiten.Image) {
 	// screen.Fill(colorBackground)
+	imageTemp.Fill(colorBackground)
 	cam.Surface.Fill(colorBackground)
 
 	// Draw decorations
@@ -363,30 +367,32 @@ func (g *game) Draw(screen *ebiten.Image) {
 	// Draw player and its gun
 	g.player.draw()
 
-	// Draw enemies
-	for _, enemy := range g.enemies {
-		enemy.draw()
-	}
+	cam.Surface.DrawImage(imageTemp, drawOptionsZero)
 
-	// Draw rockets
-	g.rocketManager.draw()
+	// // Draw enemies
+	// for _, enemy := range g.enemies {
+	// 	enemy.draw()
+	// }
 
-	// Draw walls and platforms
+	// // Draw rockets
+	// g.rocketManager.draw()
+
+	// // Draw walls and platforms
 	cam.Surface.DrawImage(imagePlatforms, drawOptionsZero)
 
 	// Draw crosshair
 	cam.Surface.DrawImage(imageCursor, &drawOptionsCursor)
 
-	// Draw rayhit
-	var imageHit *ebiten.Image
-	if g.input.attract {
-		imageHit = imageRayHitAttract
-	} else if g.input.repel {
-		imageHit = imageRayHitRepel
-	} else {
-		imageHit = imageRayHit
-	}
-	cam.Surface.DrawImage(imageHit, &drawOptionsRayHit)
+	// // Draw rayhit
+	// var imageHit *ebiten.Image
+	// if g.input.attract {
+	// 	imageHit = imageRayHitAttract
+	// } else if g.input.repel {
+	// 	imageHit = imageRayHitRepel
+	// } else {
+	// 	imageHit = imageRayHit
+	// }
+	// cam.Surface.DrawImage(imageHit, &drawOptionsRayHit)
 
 	cam.Blit(screen)
 
