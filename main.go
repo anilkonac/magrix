@@ -73,6 +73,8 @@ var (
 	drawOptionsArrowBlue   ganim8.DrawOptions
 	drawOptionsArrowOrange ganim8.DrawOptions
 	drawOptionsArrowGreen  ganim8.DrawOptions
+	//go:embed assets/heart.png
+	bytesHeart []byte
 )
 
 var (
@@ -92,6 +94,7 @@ var (
 
 var (
 	gamePaused      bool
+	gameOver        bool
 	showArrowBlue   bool
 	showArrowOrange bool
 )
@@ -285,7 +288,15 @@ func (g *game) Update() error {
 	g.space.Step(deltaTimeSec)
 
 	g.rayCast()
-	g.rocketManager.update()
+	hitBodies := g.rocketManager.update()
+	for _, hitBody := range hitBodies {
+		if hitBody == g.player.body {
+			g.player.hit()
+			if g.player.numLives <= 0 {
+				gameOver = true
+			}
+		}
+	}
 
 	// Update player and player's gun
 	g.player.update(&g.input, &g.rayHitInfo)
@@ -566,6 +577,10 @@ func (g *game) Draw(screen *ebiten.Image) {
 		screen.DrawImage(imageTextButton, &drawOptionsTextButton)
 	}
 
+	if gameOver {
+		screen.DrawImage(imageTextFail, &drawOptionsTextFail)
+	}
+
 	if showArrowBlue {
 		spriteArrows.Draw(screen, 1, &drawOptionsArrowBlue)
 
@@ -575,8 +590,11 @@ func (g *game) Draw(screen *ebiten.Image) {
 		spriteArrows.Draw(screen, 0, &drawOptionsArrowOrange)
 	}
 
+	// Draw hearts
+	screen.DrawImage(imageLives, &drawOptionsLives)
+
 	// Print fps
-	ebitenutil.DebugPrint(screen, fmt.Sprintf("TPS: %.2f  FPS: %.2f", ebiten.CurrentTPS(), ebiten.CurrentFPS()))
+	ebitenutil.DebugPrintAt(screen, fmt.Sprintf("TPS: %.2f  FPS: %.2f", ebiten.CurrentTPS(), ebiten.CurrentFPS()), screenWidth-140, 0)
 	// ebitenutil.DebugPrintAt(screen, fmt.Sprintf("X: %.0f, Y: %.0f", g.input.cursorPos.X, g.input.cursorPos.Y), 0, 15)
 }
 
@@ -592,7 +610,7 @@ func main() {
 	ebiten.SetWindowTitle("Magrix")
 	// ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
 	// ebiten.SetFPSMode(ebiten.FPSModeVsyncOffMaximum)
-	ebiten.SetCursorMode(ebiten.CursorModeCaptured)
+	// ebiten.SetCursorMode(ebiten.CursorModeCaptured)
 
 	if err := ebiten.RunGame(newGame()); err != nil {
 		log.Fatal(err)

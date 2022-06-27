@@ -17,6 +17,7 @@ const (
 	textTerminalBlue      = "Lifting the blue plasma gate"
 	textTerminalOrange    = "Lifting the orange plasma gate"
 	textButton            = "Mission Accomplished!"
+	textFail              = "Mission Failed!"
 	durationTextIntroSec  = 3.0
 	durationTextTerminals = 2.0
 	introTextShiftY       = screenHeight / 4.0
@@ -35,10 +36,12 @@ var (
 	imageTextTerminalBlue         *ebiten.Image
 	imageTextTerminalOrange       *ebiten.Image
 	imageTextButton               *ebiten.Image
+	imageTextFail                 *ebiten.Image
 	drawOptionsTextIntro          ebiten.DrawImageOptions
 	drawOptionsTextTerminalBlue   ebiten.DrawImageOptions
 	drawOptionsTextTerminalOrange ebiten.DrawImageOptions
 	drawOptionsTextButton         ebiten.DrawImageOptions
+	drawOptionsTextFail           ebiten.DrawImageOptions
 )
 
 func init() {
@@ -96,6 +99,16 @@ func init() {
 	text.Draw(imageTextButton, textButton, fontFaceButton, -boundText.Min.X, -boundText.Min.Y, colorGreen)
 	drawOptionsTextButton.GeoM.Reset()
 	drawOptionsTextButton.GeoM.Translate(
+		float64((screenWidth-boundTextSize.X)/2.0-boundText.Min.X),
+		float64((screenHeight-boundTextSize.Y)/2.0-boundText.Min.Y)+introTextShiftY)
+
+	// Prepare Fail text
+	boundText = text.BoundString(fontFaceButton, textFail)
+	boundTextSize = boundText.Size()
+	imageTextFail = ebiten.NewImage(boundTextSize.X, boundTextSize.Y)
+	text.Draw(imageTextFail, textFail, fontFaceButton, -boundText.Min.X, -boundText.Min.Y, colorGunAttract)
+	drawOptionsTextFail.GeoM.Reset()
+	drawOptionsTextFail.GeoM.Translate(
 		float64((screenWidth-boundTextSize.X)/2.0-boundText.Min.X),
 		float64((screenHeight-boundTextSize.Y)/2.0-boundText.Min.Y)+introTextShiftY)
 }
