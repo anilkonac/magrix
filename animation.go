@@ -41,16 +41,22 @@ var (
 	bytesElectricBlue []byte
 	//go:embed assets/anim_electric_orange.png
 	bytesElectricOrange []byte
+	//go:embed assets/terminal_blue.png
+	bytesTerminalBlue []byte
+	//go:embed assets/terminal_orange.png
+	bytesTerminalOrange []byte
 )
 
 var (
-	animEnemy1Idle     *ganim8.Animation
-	animPlayerIdle     *ganim8.Animation
-	animPlayerWalk     *ganim8.Animation
-	animRocket         *ganim8.Animation
-	animExplosion      *ganim8.Animation
-	animElectricBlue   *ganim8.Animation
-	animElectricOrange *ganim8.Animation
+	animEnemy1Idle       *ganim8.Animation
+	animPlayerIdle       *ganim8.Animation
+	animPlayerWalk       *ganim8.Animation
+	animRocket           *ganim8.Animation
+	animExplosion        *ganim8.Animation
+	animElectricBlue     *ganim8.Animation
+	animElectricOrange   *ganim8.Animation
+	spriteTerminalBlue   *ganim8.Sprite
+	spriteTerminalOrange *ganim8.Sprite
 )
 
 func init() {
@@ -61,15 +67,21 @@ func init() {
 	animExplosion = newAnim("1-14", 1, bytesExplosion, 32, 32, 32*numFramesExplosion, 32, durationExplosionMs)
 	animElectricBlue = newAnim("1-3", 1, bytesElectricBlue, 16, 16, 48, 16, durationElectricMs)
 	animElectricOrange = newAnim("1-3", 1, bytesElectricOrange, 16, 16, 48, 16, durationElectricMs)
+	spriteTerminalBlue = newSprite("1-2", 1, bytesTerminalBlue, 16, 32, 32, 32)
+	spriteTerminalOrange = newSprite("1-2", 1, bytesTerminalOrange, 16, 32, 32, 32)
 }
 
 func newAnim(column string, row int, fileBytes []byte, gridWidth, gridHeight, imageWidth, imageHeight, frameDurationMs int) *ganim8.Animation {
+	spr := newSprite(column, row, fileBytes, gridWidth, gridHeight, imageWidth, imageHeight)
+	return ganim8.NewAnimation(spr, time.Millisecond*time.Duration(frameDurationMs), ganim8.Nop)
+}
+
+func newSprite(column string, row int, fileBytes []byte, gridWidth, gridHeight, imageWidth, imageHeight int) *ganim8.Sprite {
 	img, err := png.Decode(bytes.NewReader(fileBytes))
 	panicErr(err)
 	image := ebiten.NewImageFromImage(img)
 
 	grid := ganim8.NewGrid(gridWidth, gridHeight, imageWidth, imageHeight)
 	frames := grid.GetFrames(column, row)
-	spr := ganim8.NewSprite(image, frames)
-	return ganim8.NewAnimation(spr, time.Millisecond*time.Duration(frameDurationMs), ganim8.Nop)
+	return ganim8.NewSprite(image, frames)
 }

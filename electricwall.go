@@ -29,8 +29,8 @@ func newElectricWall(obj *tiled.Object, space *cp.Space) *electricWall {
 
 	return &electricWall{
 		shape: shape,
-		drawOptions: *&ganim8.DrawOptions{
-			X:       obj.X + tileLength/2.0,
+		drawOptions: ganim8.DrawOptions{
+			X:       obj.X + obj.Width/2.0,
 			Y:       obj.Y + obj.Height/2.0,
 			OriginX: 0.5,
 			OriginY: 0.5,

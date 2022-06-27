@@ -138,6 +138,7 @@ type game struct {
 	rayHitInfo    cp.SegmentQueryInfo
 	rocketManager rocketManager
 	electroWalls  []*electricWall
+	terminals     []*terminal
 }
 
 func newGame() *game {
@@ -169,6 +170,7 @@ func (g *game) loadMap(gameMap *tiled.Map) {
 		objectGroupPlayer        = 1
 		objectGroupEnemy         = 2
 		objectGroupWallsElectric = 3
+		objectGroupTerminals     = 4
 	)
 
 	g.addWalls(gameMap.ObjectGroups[objectGroupWalls].Objects)
@@ -176,6 +178,11 @@ func (g *game) loadMap(gameMap *tiled.Map) {
 	// Add Electric Walls
 	for _, objectElect := range gameMap.ObjectGroups[objectGroupWallsElectric].Objects {
 		g.electroWalls = append(g.electroWalls, newElectricWall(objectElect, g.space))
+	}
+
+	// Add terminals
+	for _, objectTerm := range gameMap.ObjectGroups[objectGroupTerminals].Objects {
+		g.terminals = append(g.terminals, newTerminal(objectTerm, g.space))
 	}
 
 	var playerStartLoc cp.Vector
@@ -190,10 +197,8 @@ func (g *game) loadMap(gameMap *tiled.Map) {
 	}
 
 	const (
-		layerPlatform      = 3
-		layerComputers     = 2
-		layerDecorations   = 0
-		layerInteractables = 1
+		layerPlatform    = 1
+		layerDecorations = 0
 	)
 
 	// Render layer images
@@ -203,16 +208,6 @@ func (g *game) loadMap(gameMap *tiled.Map) {
 	err = renderer.RenderLayer(layerPlatform)
 	panicErr(err)
 	imagePlatforms = ebiten.NewImageFromImage(renderer.Result)
-
-	renderer.Clear()
-	err = renderer.RenderLayer(layerInteractables)
-	panicErr(err)
-	imageInteractables = ebiten.NewImageFromImage(renderer.Result)
-
-	renderer.Clear()
-	err = renderer.RenderLayer(layerComputers)
-	panicErr(err)
-	imageComputers = ebiten.NewImageFromImage(renderer.Result)
 
 	renderer.Clear()
 	err = renderer.RenderLayer(layerDecorations)
@@ -372,11 +367,11 @@ func (g *game) Draw(screen *ebiten.Image) {
 
 	// Draw decorations
 	cam.Surface.DrawImage(imageDecorations, drawOptionsZero)
-	cam.Surface.DrawImage(imageComputers, drawOptionsZero)
-	cam.Surface.DrawImage(imageInteractables, drawOptionsZero)
 
-	// Draw player and its gun
-	g.player.draw()
+	// Draw terminals
+	for _, terminal := range g.terminals {
+		terminal.draw()
+	}
 
 	// Draw enemies
 	for _, enemy := range g.enemies {
@@ -393,7 +388,10 @@ func (g *game) Draw(screen *ebiten.Image) {
 
 	cam.Surface.DrawImage(imageObjects, drawOptionsZero)
 
-	// // Draw walls and platforms
+	// Draw player and its gun
+	g.player.draw()
+
+	// Draw walls and platforms
 	cam.Surface.DrawImage(imagePlatforms, drawOptionsZero)
 
 	// Draw crosshair
