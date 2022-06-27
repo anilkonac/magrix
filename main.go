@@ -383,16 +383,16 @@ func (g *game) Draw(screen *ebiten.Image) {
 	// Draw crosshair
 	cam.Surface.DrawImage(imageCursor, &drawOptionsCursor)
 
-	// // Draw rayhit
-	// var imageHit *ebiten.Image
-	// if g.input.attract {
-	// 	imageHit = imageRayHitAttract
-	// } else if g.input.repel {
-	// 	imageHit = imageRayHitRepel
-	// } else {
-	// 	imageHit = imageRayHit
-	// }
-	// cam.Surface.DrawImage(imageHit, &drawOptionsRayHit)
+	// Draw rayhit
+	var imageHit *ebiten.Image
+	if g.input.attract {
+		imageHit = imageRayHitAttract
+	} else if g.input.repel {
+		imageHit = imageRayHitRepel
+	} else {
+		imageHit = imageRayHit
+	}
+	cam.Surface.DrawImage(imageHit, &drawOptionsRayHit)
 
 	cam.Blit(screen)
 
