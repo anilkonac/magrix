@@ -41,6 +41,8 @@ const mapPath = "assets/gameMap.tmx"
 
 const zoomMultiplier = 0.1
 
+const interactionRadiusTile = 1
+
 var (
 	colorBackground = color.RGBA{38, 38, 38, 255}
 	colorGun        = color.RGBA{253, 147, 89, 255}
@@ -130,15 +132,18 @@ func initRayHitImages() {
 
 // game implements ebiten.game interface.
 type game struct {
-	player        player
-	enemies       []*enemy
-	walls         []*cp.Shape
-	space         *cp.Space
-	input         input
-	rayHitInfo    cp.SegmentQueryInfo
-	rocketManager rocketManager
-	electroWalls  []*electricWall
-	terminals     []*terminal
+	player         player
+	enemies        []*enemy
+	walls          []*cp.Shape
+	space          *cp.Space
+	input          input
+	rayHitInfo     cp.SegmentQueryInfo
+	rocketManager  rocketManager
+	terminalBlue   *terminal
+	terminalOrange *terminal
+	terminalIntro  *terminal
+	eWallBlue      *electricWall
+	eWallOrange    *electricWall
 }
 
 func newGame() *game {
@@ -175,15 +180,14 @@ func (g *game) loadMap(gameMap *tiled.Map) {
 
 	g.addWalls(gameMap.ObjectGroups[objectGroupWalls].Objects)
 
-	// Add Electric Walls
-	for _, objectElect := range gameMap.ObjectGroups[objectGroupWallsElectric].Objects {
-		g.electroWalls = append(g.electroWalls, newElectricWall(objectElect, g.space))
-	}
+	// Add Electric Walls (Manual assignment for now)
+	g.eWallBlue = newElectricWall(gameMap.ObjectGroups[objectGroupWallsElectric].Objects[0], g.space)
+	g.eWallOrange = newElectricWall(gameMap.ObjectGroups[objectGroupWallsElectric].Objects[1], g.space)
 
 	// Add terminals
-	for _, objectTerm := range gameMap.ObjectGroups[objectGroupTerminals].Objects {
-		g.terminals = append(g.terminals, newTerminal(objectTerm, g.space))
-	}
+	g.terminalIntro = newTerminal(gameMap.ObjectGroups[objectGroupTerminals].Objects[2], g.space)
+	g.terminalBlue = newTerminal(gameMap.ObjectGroups[objectGroupTerminals].Objects[0], g.space)
+	g.terminalOrange = newTerminal(gameMap.ObjectGroups[objectGroupTerminals].Objects[1], g.space)
 
 	var playerStartLoc cp.Vector
 	playerStartLoc.X = gameMap.ObjectGroups[objectGroupPlayer].Objects[0].X
@@ -275,8 +279,42 @@ func (g *game) Update() error {
 		}
 	}
 
-	for _, eWall := range g.electroWalls {
-		eWall.update()
+	// Check player interaction
+	if g.input.activate {
+		interactionRadius := interactionRadiusTile * tileLength
+		// Check if near intro terminal
+
+		// Check if near blue terminal
+		if g.terminalBlue.pos.Distance(g.player.pos) < interactionRadius {
+			g.terminalBlue.trigger()
+
+			// Remove from space
+			g.space.RemoveShape(g.eWallBlue.shape)
+			g.space.RemoveBody(g.eWallBlue.shape.Body())
+
+			g.eWallBlue = nil
+		}
+
+		// Check if near orange terminal
+		if g.terminalOrange.pos.Distance(g.player.pos) < interactionRadius {
+			g.terminalOrange.trigger()
+
+			// Remove from space
+			g.space.RemoveShape(g.eWallOrange.shape)
+			g.space.RemoveBody(g.eWallOrange.shape.Body())
+
+			g.eWallOrange = nil
+		}
+
+		// Check if near the button
+	}
+
+	// Update ewall animations
+	if g.eWallBlue != nil {
+		g.eWallBlue.update()
+	}
+	if g.eWallOrange != nil {
+		g.eWallOrange.update()
 	}
 
 	// Update draw options
@@ -369,9 +407,9 @@ func (g *game) Draw(screen *ebiten.Image) {
 	cam.Surface.DrawImage(imageDecorations, drawOptionsZero)
 
 	// Draw terminals
-	for _, terminal := range g.terminals {
-		terminal.draw()
-	}
+	g.terminalIntro.draw()
+	g.terminalBlue.draw()
+	g.terminalOrange.draw()
 
 	// Draw enemies
 	for _, enemy := range g.enemies {
@@ -382,8 +420,11 @@ func (g *game) Draw(screen *ebiten.Image) {
 	g.rocketManager.draw()
 
 	// Draw electric walls
-	for _, eWall := range g.electroWalls {
-		eWall.draw()
+	if g.eWallBlue != nil {
+		g.eWallBlue.draw()
+	}
+	if g.eWallOrange != nil {
+		g.eWallOrange.draw()
 	}
 
 	cam.Surface.DrawImage(imageObjects, drawOptionsZero)

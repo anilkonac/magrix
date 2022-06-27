@@ -10,6 +10,7 @@ import (
 )
 
 type terminal struct {
+	pos         cp.Vector
 	shape       *cp.Shape
 	drawOptions ganim8.DrawOptions
 	spr         *ganim8.Sprite
@@ -46,6 +47,7 @@ func newTerminal(obj *tiled.Object, space *cp.Space) *terminal {
 			ScaleY:  1.0,
 		},
 		spr: spr,
+		pos: cp.Vector{X: obj.X + obj.Width/2.0, Y: obj.Y + obj.Height/2.0},
 	}
 }
 
