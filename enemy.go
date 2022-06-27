@@ -94,7 +94,7 @@ func (e *enemy) update(force *cp.Vector) {
 		},
 	)
 
-	// Update animation
+	// Update draw options
 	e.curAnim.Update(animDeltaTime)
 	e.drawOptions.GeoM.Reset()
 	e.drawOptions.GeoM.Translate(-tileLength/2.0, -tileLength)

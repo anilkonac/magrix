@@ -369,7 +369,7 @@ func (g *game) Draw(screen *ebiten.Image) {
 	}
 
 	// Draw rockets
-	// g.rocketManager.draw(screen)
+	g.rocketManager.draw()
 
 	// Draw walls and platforms
 	// screen.DrawImage(imagePlatforms, &emptyDrawOptions)
@@ -408,7 +408,7 @@ func main() {
 	ebiten.SetWindowTitle("Magrix")
 	// ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
 	// ebiten.SetFPSMode(ebiten.FPSModeVsyncOffMaximum)
-	// ebiten.SetCursorMode(ebiten.CursorModeCaptured)
+	ebiten.SetCursorMode(ebiten.CursorModeCaptured)
 
 	if err := ebiten.RunGame(newGame()); err != nil {
 		log.Fatal(err)
