@@ -30,7 +30,7 @@ const (
 )
 
 const (
-	playerWidthTile  = 1
+	playerWidthTile  = 10.0 / 16.0
 	playerHeightTile = 1.6
 	gunWidthTile     = 1
 	gunHeightTile    = 1.0 / 3.0
@@ -74,6 +74,7 @@ var (
 	imageGunIdle    *ebiten.Image
 	imageGunAttract *ebiten.Image
 	imageGunRepel   *ebiten.Image
+	imagePlayer     *ebiten.Image
 )
 
 var posGunRelative cp.Vector
@@ -90,24 +91,27 @@ func init() {
 	img, err = png.Decode(bytes.NewReader(gunRepelBytes))
 	panicErr(err)
 	imageGunRepel = ebiten.NewImageFromImage(img)
+
+	imagePlayer = ebiten.NewImage(16, 32)
 }
 
 type player struct {
-	pos            cp.Vector
-	posGun         cp.Vector
-	size           cp.Vector
-	sizeGun        cp.Vector
-	angleGun       float64
-	shape          *cp.Shape
-	body           *cp.Body
-	drawOptions    ganim8.DrawOptions
-	drawOptionsGun ebiten.DrawImageOptions
-	curAnim        *ganim8.Animation
-	onGround       bool
-	gunRay         [2]cp.Vector
-	gunForce       cp.Vector
-	state          playerState
-	stateGun       gunState
+	pos             cp.Vector
+	posGun          cp.Vector
+	size            cp.Vector
+	sizeGun         cp.Vector
+	angleGun        float64
+	shape           *cp.Shape
+	body            *cp.Body
+	drawOptions     ebiten.DrawImageOptions
+	drawOptionsAnim ganim8.DrawOptions
+	drawOptionsGun  ebiten.DrawImageOptions
+	curAnim         *ganim8.Animation
+	onGround        bool
+	gunRay          [2]cp.Vector
+	gunForce        cp.Vector
+	state           playerState
+	stateGun        gunState
 }
 
 func newPlayer(pos cp.Vector, space *cp.Space) *player {
@@ -121,9 +125,9 @@ func newPlayer(pos cp.Vector, space *cp.Space) *player {
 			X: gunWidthTile * tileLength,
 			Y: gunHeightTile * tileLength,
 		},
-		drawOptions: ganim8.DrawOptions{
-			OriginX: 0.5,
-			OriginY: 0.6,
+		drawOptionsAnim: ganim8.DrawOptions{
+			OriginX: 0.0,
+			OriginY: 0.1,
 			ScaleX:  1.0,
 			ScaleY:  1.0,
 		},
@@ -150,16 +154,15 @@ func (p *player) update(input *input, rayHitInfo *cp.SegmentQueryInfo) {
 	p.pos = p.body.Position()
 
 	// Update gun position
-	if p.angleGun < -halfPi /*-turnTolerance*/ || p.angleGun > halfPi /*+turnTolerance*/ {
+	if p.angleGun < -halfPi || p.angleGun > halfPi {
 		p.posGun = p.pos.Add(cp.Vector{X: -posGunRelative.X, Y: posGunRelative.Y})
-		// } else if p.angleGun > -halfPi+turnTolerance || p.angleGun < halfPi-turnTolerance {
 	} else {
 		p.posGun = p.pos.Add(posGunRelative)
 	}
 
 	// Update gun angle
-	distX := input.cursorPos.X - p.posGun.X
-	distY := input.cursorPos.Y - p.posGun.Y
+	distX := cursorX - p.posGun.X
+	distY := cursorY - p.posGun.Y
 	p.angleGun = math.Atan2(distY, distX)
 
 	p.checkOnGround()
@@ -183,7 +186,7 @@ func (p *player) update(input *input, rayHitInfo *cp.SegmentQueryInfo) {
 	// v := p.body.Velocity()
 	// fmt.Printf("Friction: %.2f\tVel X: %.2f\tVel Y: %.2f\n", p.shape.Friction(), v.X, v.Y)
 	p.curAnim.Update(animDeltaTime)
-	p.updateGeometryMatrices()
+	p.updateDrawOptions()
 
 	// fmt.Printf("p.angleGun: %v\n", p.angleGun)
 }
@@ -254,34 +257,39 @@ func (p *player) handleInputs(input *input, rayHitInfo *cp.SegmentQueryInfo) {
 	// fmt.Printf("Force X:%.2f\tY:%.2f\n", p.gunForce.X, p.gunForce.Y)
 }
 
-func (p *player) updateGeometryMatrices() {
+func (p *player) updateDrawOptions() {
+	p.drawOptions = *cam.GetTranslation(p.pos.X-tileLength/2.0, p.pos.Y-tileLength)
+
 	// Player
-	p.drawOptions.X = p.pos.X
-	p.drawOptions.Y = p.pos.Y
-	if p.angleGun < -halfPi /*-turnTolerance*/ || p.angleGun > halfPi /*+turnTolerance*/ {
-		p.drawOptions.ScaleX = -1.0
-		// } else if p.angleGun > -halfPi+turnTolerance || p.angleGun < halfPi-turnTolerance {
+	if p.angleGun < -halfPi || p.angleGun > halfPi {
+		p.drawOptionsAnim.ScaleX = -1.0
+		p.drawOptionsAnim.OriginX = 1.0
 	} else {
-		p.drawOptions.ScaleX = 1.0
+		p.drawOptionsAnim.ScaleX = 1.0
+		p.drawOptionsAnim.OriginX = 0.0
+
 	}
 
 	// Gun
 	p.drawOptionsGun.GeoM.Reset()
 	p.drawOptionsGun.GeoM.Translate(0, -p.sizeGun.Y/2.0)
 	p.drawOptionsGun.GeoM.Rotate(p.angleGun)
-	p.drawOptionsGun.GeoM.Translate(p.posGun.X, p.posGun.Y)
+	p.drawOptionsGun.GeoM.Concat(cam.GetTranslation(p.posGun.X, p.posGun.Y).GeoM)
 }
 
-func (p *player) draw(dst *ebiten.Image) {
-	p.curAnim.Draw(dst, &p.drawOptions)
+func (p *player) draw() {
+	// Draw player
+	imagePlayer.Clear()
+	p.curAnim.Draw(imagePlayer, &p.drawOptionsAnim)
+	cam.Surface.DrawImage(imagePlayer, &p.drawOptions)
 
-	// Draw prototype gun
+	// Draw gun
 	if p.stateGun == gunStateAttract {
-		dst.DrawImage(imageGunAttract, &p.drawOptionsGun)
+		cam.Surface.DrawImage(imageGunAttract, &p.drawOptionsGun)
 	} else if p.stateGun == gunStateRepel {
-		dst.DrawImage(imageGunRepel, &p.drawOptionsGun)
+		cam.Surface.DrawImage(imageGunRepel, &p.drawOptionsGun)
 	} else {
-		dst.DrawImage(imageGunIdle, &p.drawOptionsGun)
+		cam.Surface.DrawImage(imageGunIdle, &p.drawOptionsGun)
 	}
 
 	// ebitenutil.DrawLine(dst, p.gunRay[0].X, p.gunRay[0].Y, p.gunRay[1].X, p.gunRay[1].Y, colorCrosshair)

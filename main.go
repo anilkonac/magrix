@@ -15,6 +15,7 @@ import (
 	"github.com/jakecoffman/cp"
 	"github.com/lafriks/go-tiled"
 	"github.com/lafriks/go-tiled/render"
+	camera "github.com/melonfunction/ebiten-camera"
 )
 
 const (
@@ -23,6 +24,8 @@ const (
 	screenWidth  = 960
 	screenHeight = 720
 	deltaTimeSec = 1.0 / 60.0
+	mapWidth     = 960
+	mapHeight    = 960
 )
 
 const (
@@ -35,6 +38,8 @@ const (
 )
 
 const mapPath = "assets/gameMap.tmx"
+
+const zoomMultiplier = 0.1
 
 var (
 	colorBackground = color.RGBA{38, 38, 38, 255}
@@ -55,6 +60,7 @@ var (
 	imageRayHitRepel   = ebiten.NewImage(rayHitImageWidth, rayHitImageWidth)
 	drawOptionsCursor  ebiten.DrawImageOptions
 	drawOptionsRayHit  ebiten.DrawImageOptions
+	drawOptionsZero    *ebiten.DrawImageOptions
 	tileLength         float64
 )
 
@@ -63,6 +69,12 @@ var (
 	imageInteractables *ebiten.Image
 	imageComputers     *ebiten.Image
 	imageDecorations   *ebiten.Image
+	imageObjects       *ebiten.Image = ebiten.NewImage(mapWidth, mapHeight)
+)
+
+var (
+	cam              = camera.NewCamera(screenWidth, screenHeight, 0, 0, 0, 1)
+	cursorX, cursorY float64
 )
 
 var gamePaused bool
@@ -143,6 +155,7 @@ func newGame() *game {
 			space: space,
 		},
 	}
+	cam.Zoom(2.0)
 
 	game.loadMap(gameMap)
 
@@ -217,8 +230,13 @@ func (g *game) addWalls(wallObjects []*tiled.Object) {
 // Update is called every tick (1/60 [s] by default).
 func (g *game) Update() error {
 	g.input.update()
-	drawOptionsCursor.GeoM.Reset()
-	drawOptionsCursor.GeoM.Translate(g.input.cursorPos.X-crosshairRadius, g.input.cursorPos.Y-crosshairRadius)
+	if g.input.wheelDy > 0 {
+		cam.Zoom(1.0 + zoomMultiplier)
+	} else if g.input.wheelDy < 0 {
+		cam.Zoom(1.0 - zoomMultiplier)
+	}
+	cursorX, cursorY = cam.GetCursorCoords()
+	drawOptionsCursor = *cam.GetTranslation(cursorX-crosshairRadius, cursorY-crosshairRadius)
 
 	g.updateSettings()
 
@@ -233,6 +251,7 @@ func (g *game) Update() error {
 
 	// Update player and player's gun
 	g.player.update(&g.input, &g.rayHitInfo)
+	cam.SetPosition(g.player.pos.X, g.player.pos.Y)
 
 	// Send the negative of the player's gun force to the rocket
 	var force cp.Vector
@@ -254,11 +273,11 @@ func (g *game) Update() error {
 		}
 	}
 
-	// Update geometry matrices
+	// Update draw options
 	const rayHitImageRadius = rayHitImageWidth / 2.0
 
-	drawOptionsRayHit.GeoM.Reset()
-	drawOptionsRayHit.GeoM.Translate(g.rayHitInfo.Point.X-rayHitImageRadius, g.rayHitInfo.Point.Y-rayHitImageRadius)
+	drawOptionsZero = cam.GetTranslation(0, 0)
+	drawOptionsRayHit = *cam.GetTranslation(g.rayHitInfo.Point.X-rayHitImageRadius, g.rayHitInfo.Point.Y-rayHitImageRadius)
 
 	return nil
 }
@@ -334,33 +353,35 @@ func (g *game) rayCast() {
 
 }
 
-var emptyDrawOptions ebiten.DrawImageOptions
-
 // Draw is called every frame (typically 1/60[s] for 60Hz display).
 func (g *game) Draw(screen *ebiten.Image) {
-	screen.Fill(colorBackground)
+	// screen.Fill(colorBackground)
+	imageObjects.Clear()
+	cam.Surface.Fill(colorBackground)
 
 	// Draw decorations
-	screen.DrawImage(imageDecorations, &emptyDrawOptions)
-	screen.DrawImage(imageComputers, &emptyDrawOptions)
-	screen.DrawImage(imageInteractables, &emptyDrawOptions)
+	cam.Surface.DrawImage(imageDecorations, drawOptionsZero)
+	cam.Surface.DrawImage(imageComputers, drawOptionsZero)
+	cam.Surface.DrawImage(imageInteractables, drawOptionsZero)
 
 	// Draw player and its gun
-	g.player.draw(screen)
+	g.player.draw()
 
 	// Draw enemies
 	for _, enemy := range g.enemies {
-		enemy.draw(screen)
+		enemy.draw()
 	}
 
 	// Draw rockets
-	g.rocketManager.draw(screen)
+	g.rocketManager.draw()
 
-	// Draw walls and platforms
-	screen.DrawImage(imagePlatforms, &emptyDrawOptions)
+	cam.Surface.DrawImage(imageObjects, drawOptionsZero)
+
+	// // Draw walls and platforms
+	cam.Surface.DrawImage(imagePlatforms, drawOptionsZero)
 
 	// Draw crosshair
-	screen.DrawImage(imageCursor, &drawOptionsCursor)
+	cam.Surface.DrawImage(imageCursor, &drawOptionsCursor)
 
 	// Draw rayhit
 	var imageHit *ebiten.Image
@@ -371,7 +392,9 @@ func (g *game) Draw(screen *ebiten.Image) {
 	} else {
 		imageHit = imageRayHit
 	}
-	screen.DrawImage(imageHit, &drawOptionsRayHit)
+	cam.Surface.DrawImage(imageHit, &drawOptionsRayHit)
+
+	cam.Blit(screen)
 
 	// Print fps
 	ebitenutil.DebugPrint(screen, fmt.Sprintf("TPS: %.2f  FPS: %.2f", ebiten.CurrentTPS(), ebiten.CurrentFPS()))

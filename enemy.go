@@ -6,7 +6,6 @@ import (
 	"math"
 	"math/rand"
 
-	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/jakecoffman/cp"
 	"github.com/yohamta/ganim8/v2"
 )
@@ -91,15 +90,15 @@ func (e *enemy) update(force *cp.Vector) {
 		},
 	)
 
-	// Update animation
+	// Update draw options
 	e.curAnim.Update(animDeltaTime)
 	e.drawOptions.X = pos.X
 	e.drawOptions.Y = pos.Y
 	e.drawOptions.Rotate = e.body.Angle()
 }
 
-func (e *enemy) draw(dst *ebiten.Image) {
-	e.curAnim.Draw(dst, &e.drawOptions)
+func (e *enemy) draw() {
+	e.curAnim.Draw(imageObjects, &e.drawOptions)
 }
 
 func enemyUpdateVelocity(body *cp.Body, gravity cp.Vector, damping, dt float64) {
