@@ -35,7 +35,7 @@ func newElectricWall(obj *tiled.Object, space *cp.Space) *electricWall {
 			OriginX: 0.5,
 			OriginY: 0.5,
 			ScaleX:  1.0,
-			ScaleY:  2.0,
+			ScaleY:  3.0,
 		},
 		anim: anim,
 	}

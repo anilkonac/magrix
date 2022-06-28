@@ -486,6 +486,16 @@ func (g *game) updateSettings() {
 	if g.input.pausePlay {
 		gamePaused = !gamePaused
 	}
+
+	if g.input.musicToggle {
+		if musicState == musicOn {
+			musicState = musicMuted
+			playerMusic.Pause()
+		} else if (musicState == musicMuted) && !gamePaused {
+			musicState = musicOn
+			playerMusic.Play()
+		}
+	}
 }
 
 func (g *game) rayCast() {
