@@ -13,7 +13,7 @@ import (
 const (
 	enemyMass              = 0.75
 	enemyFriction          = 0.75
-	enemyMoment            = 250
+	enemyMoment            = 125
 	enemyWidthTile         = 1
 	enemyHeightTile        = 1.5
 	enemyEyeRange          = mapWidth / 2.0

@@ -13,9 +13,9 @@ const (
 	dpi                   = 72
 	fontSizeIntro         = 24
 	fontSizeButton        = 48
-	textIntro             = "Locating terminals that lift plasma gates..."
-	textTerminalBlue      = "Lifting the blue plasma gate"
-	textTerminalOrange    = "Lifting the orange plasma gate"
+	textIntro             = "Locating terminals controlling plasma walls..."
+	textTerminalBlue      = "Disabling the blue plasma wall..."
+	textTerminalOrange    = "Disabling the orange plasma wall..."
 	textButton            = "Mission Accomplished!"
 	textFail              = "Mission Failed!"
 	durationTextIntroSec  = 2.5

@@ -166,7 +166,7 @@ func (p *player) update(inp *input, rayHitInfo *cp.SegmentQueryInfo) {
 	// 	p.body.SetMoment(100)
 	// }
 
-	// Update gun position
+	// Update gun position and angle
 	gunPosLeft := p.pos.Add(cp.Vector{X: -posGunRelative.X, Y: posGunRelative.Y})
 	gunPosRight := p.pos.Add(posGunRelative)
 
@@ -178,21 +178,14 @@ func (p *player) update(inp *input, rayHitInfo *cp.SegmentQueryInfo) {
 	distY = cursorY - gunPosRight.Y
 	angleGunRight := math.Atan2(distY, distX)
 
-	var leftSaysShouldLeft bool
-	var rightSaysShouldLeft bool
-	if angleGunLeft < -halfPi || angleGunLeft > halfPi {
-		leftSaysShouldLeft = true
-	}
+	leftSaysTurnLeft := (angleGunLeft < -halfPi) || (angleGunLeft > halfPi)
+	rightSaysTurnLeft := (angleGunRight < -halfPi) || (angleGunRight > halfPi)
 
-	if angleGunRight < -halfPi || angleGunRight > halfPi {
-		rightSaysShouldLeft = true
-	}
-
-	if leftSaysShouldLeft && rightSaysShouldLeft {
+	if leftSaysTurnLeft && rightSaysTurnLeft {
 		p.posGun = gunPosLeft
 		p.angleGun = angleGunLeft
 		p.turnedLeft = true
-	} else if !leftSaysShouldLeft && !rightSaysShouldLeft {
+	} else if !leftSaysTurnLeft && !rightSaysTurnLeft {
 		p.posGun = gunPosRight
 		p.angleGun = angleGunRight
 		p.turnedLeft = false
@@ -234,8 +227,6 @@ func (p *player) update(inp *input, rayHitInfo *cp.SegmentQueryInfo) {
 		p.curAnim.Update(animDeltaTime)
 	}
 	p.updateDrawOptions()
-
-	// fmt.Printf("p.angleGun: %v\n", p.angleGun)
 }
 
 func (p *player) checkOnGround() {

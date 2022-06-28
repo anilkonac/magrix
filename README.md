@@ -3,7 +3,7 @@
 ## Credits
 ### Tileset 
 0x72_16x16RobotTileset.v1.png 
-* Player character, magnetic gun and arrow drawings by Anıl Konaç 
+* Player character, magnetic gun, rocket and arrow drawings by Anıl Konaç 
 * [Heart](https://miguel-pm-romeu.itch.io/heart) by Miguel_PM_Romeu 
 * All other tiles by 0x72 (https://0x72.itch.io/16x16-robot-tileset) License: CC-0  
 
