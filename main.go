@@ -197,6 +197,30 @@ func newGame() *game {
 	return game
 }
 
+func (g *game) restart() {
+	space := cp.NewSpace()
+	// space.Iterations = spaceIterations
+	space.SetGravity(cp.Vector{X: 0, Y: gravity})
+
+	// Parse map file
+	gameMap, err := tiled.LoadFile(mapPath)
+	panicErr(err)
+
+	*g = game{
+		space: space,
+		rocketManager: rocketManager{
+			space: space,
+		},
+	}
+	cam.Zoom(zoom)
+
+	g.loadMap(gameMap)
+
+	gameOver = false
+	showArrowBlue = false
+	showArrowOrange = false
+}
+
 func (g *game) loadMap(gameMap *tiled.Map) {
 	const (
 		objectGroupWalls         = 0
@@ -294,6 +318,10 @@ func (g *game) Update() error {
 			g.player.hit()
 			if g.player.numLives <= 0 {
 				gameOver = true
+				go func() {
+					time.Sleep(time.Second * 3)
+					g.restart()
+				}()
 			}
 		} else {
 			for _, enemy := range g.enemies {
@@ -417,7 +445,8 @@ func (g *game) checkPlayerInteraction() {
 		showTextIntro = true
 
 		go func() {
-			timer := time.NewTimer(time.Second * durationTextIntroSec)
+			duration := time.Duration(1000 * durationTextIntroSec)
+			timer := time.NewTimer(time.Millisecond * duration)
 			<-timer.C
 			showTextIntro = false
 			showArrowBlue = true

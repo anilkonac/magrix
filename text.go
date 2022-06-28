@@ -18,7 +18,7 @@ const (
 	textTerminalOrange    = "Lifting the orange plasma gate"
 	textButton            = "Mission Accomplished!"
 	textFail              = "Mission Failed!"
-	durationTextIntroSec  = 3.0
+	durationTextIntroSec  = 2.5
 	durationTextTerminals = 2.0
 	introTextShiftY       = screenHeight / 4.0
 )

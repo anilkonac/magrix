@@ -55,7 +55,7 @@ func newEnemy(pos cp.Vector, space *cp.Space, turnedLeft bool) *enemy {
 		enemy.drawOptions.ScaleX = -1.0
 	}
 
-	enemy.curAnim.GoToFrame(rand.Intn(4)) // Have all enemies start at different frames
+	enemy.curAnim.GoToFrame(1 + rand.Intn(4)) // Have all enemies start at different frames
 
 	body := cp.NewBody(enemyMass, enemyMoment)
 	body.SetPosition(cp.Vector{X: pos.X, Y: pos.Y})
