@@ -82,7 +82,7 @@ var (
 	drawOptionsLives ebiten.DrawImageOptions
 )
 
-var posGunRelative cp.Vector
+var posGunRelative = cp.Vector{X: tileLength / 7.0, Y: -tileLength / 4.0}
 
 func init() {
 	imageGunIdle = loadImage(gunIdleBytes)
@@ -118,6 +118,7 @@ type player struct {
 	state           playerState
 	stateGun        gunState
 	numLives        int
+	turnedLeft      bool
 }
 
 func newPlayer(pos cp.Vector, space *cp.Space) *player {
@@ -151,8 +152,6 @@ func newPlayer(pos cp.Vector, space *cp.Space) *player {
 	space.AddBody(player.body)
 	space.AddShape(player.shape)
 
-	posGunRelative = cp.Vector{X: tileLength / 7.0, Y: -tileLength / 4.0}
-
 	player.prepareLivesIndicator()
 	drawOptionsLives.GeoM.Reset()
 	drawOptionsLives.GeoM.Scale(2.5, 2.5)
@@ -168,17 +167,41 @@ func (p *player) update(inp *input, rayHitInfo *cp.SegmentQueryInfo) {
 	// }
 
 	// Update gun position
-	if p.angleGun < -halfPi || p.angleGun > halfPi {
-		p.posGun = p.pos.Add(cp.Vector{X: -posGunRelative.X, Y: posGunRelative.Y})
-	} else {
-		p.posGun = p.pos.Add(posGunRelative)
+	gunPosLeft := p.pos.Add(cp.Vector{X: -posGunRelative.X, Y: posGunRelative.Y})
+	gunPosRight := p.pos.Add(posGunRelative)
+
+	distX := cursorX - gunPosLeft.X
+	distY := cursorY - gunPosLeft.Y
+	angleGunLeft := math.Atan2(distY, distX)
+
+	distX = cursorX - gunPosRight.X
+	distY = cursorY - gunPosRight.Y
+	angleGunRight := math.Atan2(distY, distX)
+
+	var leftSaysShouldLeft bool
+	var rightSaysShouldLeft bool
+	if angleGunLeft < -halfPi || angleGunLeft > halfPi {
+		leftSaysShouldLeft = true
 	}
 
-	// Update gun angle
-	if !gameOver {
-		distX := cursorX - p.posGun.X
-		distY := cursorY - p.posGun.Y
-		p.angleGun = math.Atan2(distY, distX)
+	if angleGunRight < -halfPi || angleGunRight > halfPi {
+		rightSaysShouldLeft = true
+	}
+
+	if leftSaysShouldLeft && rightSaysShouldLeft {
+		p.posGun = gunPosLeft
+		p.angleGun = angleGunLeft
+		p.turnedLeft = true
+	} else if !leftSaysShouldLeft && !rightSaysShouldLeft {
+		p.posGun = gunPosRight
+		p.angleGun = angleGunRight
+		p.turnedLeft = false
+	} else if p.turnedLeft {
+		p.posGun = gunPosLeft
+		p.angleGun = angleGunLeft
+	} else {
+		p.posGun = gunPosRight
+		p.angleGun = angleGunRight
 	}
 
 	p.checkOnGround()
