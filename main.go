@@ -3,6 +3,7 @@
 package main
 
 import (
+	"embed"
 	"fmt"
 	"image/color"
 	"log"
@@ -38,7 +39,10 @@ const (
 	// spaceIterations      = 10
 )
 
-const mapPath = "assets/gameMap.tmx"
+const mapPath = "assets/map/gameMap.tmx"
+
+//go:embed assets/map
+var FS embed.FS
 
 const (
 	zoomMultiplier        = 0.1
@@ -173,10 +177,10 @@ func newGame() *game {
 	space.SetGravity(cp.Vector{X: 0, Y: gravity})
 
 	// Parse map file
-	gameMap, err := tiled.LoadFile(mapPath)
+	gameMap, err := tiled.LoadFile(mapPath, tiled.WithFileSystem(FS))
 	panicErr(err)
-	// tileLength = float64(gameMap.TileWidth)
 
+	// Load tiles
 	game := &game{
 		space: space,
 		rocketManager: rocketManager{
@@ -203,7 +207,7 @@ func (g *game) restart() {
 	space.SetGravity(cp.Vector{X: 0, Y: gravity})
 
 	// Parse map file
-	gameMap, err := tiled.LoadFile(mapPath)
+	gameMap, err := tiled.LoadFile(mapPath, tiled.WithFileSystem(FS))
 	panicErr(err)
 
 	*g = game{
