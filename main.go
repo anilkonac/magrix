@@ -187,12 +187,12 @@ func newGame() *game {
 
 	game.loadMap(gameMap)
 
-	drawOptionsArrowBlue.ScaleX = 1.0
-	drawOptionsArrowBlue.ScaleY = 1.0
-	drawOptionsArrowOrange.ScaleX = 1.0
-	drawOptionsArrowOrange.ScaleY = 1.0
-	drawOptionsArrowGreen.ScaleX = 1.0
-	drawOptionsArrowGreen.ScaleY = 1.0
+	drawOptionsArrowBlue.ScaleX = 2.0
+	drawOptionsArrowBlue.ScaleY = 2.0
+	drawOptionsArrowOrange.ScaleX = 2.0
+	drawOptionsArrowOrange.ScaleY = 2.0
+	drawOptionsArrowGreen.ScaleX = 2.0
+	drawOptionsArrowGreen.ScaleY = 2.0
 
 	return game
 }
@@ -295,6 +295,13 @@ func (g *game) Update() error {
 			if g.player.numLives <= 0 {
 				gameOver = true
 			}
+		} else {
+			for _, enemy := range g.enemies {
+				if hitBody == enemy.body && enemy.isAlive {
+					enemy.isAlive = false
+					g.killEnemy(enemy)
+				}
+			}
 		}
 	}
 
@@ -302,14 +309,19 @@ func (g *game) Update() error {
 	g.player.update(&g.input, &g.rayHitInfo)
 	cam.SetPosition(g.player.pos.X, g.player.pos.Y)
 
-	// Send the negative of the player's gun force to the rocket
+	// Send the negative of the player's gun force to the enemy
 	var force cp.Vector
+	var enemyFell bool
 	for _, enemy := range g.enemies {
 		if g.rayHitInfo.Shape == enemy.shape {
 			force = g.player.gunForce.Neg()
-			enemy.update(&force)
+			enemyFell = enemy.update(&force)
 		} else {
-			enemy.update(nil)
+			enemyFell = enemy.update(nil)
+		}
+
+		if enemyFell {
+			g.killEnemy(enemy)
 		}
 	}
 	// Send the negative of the player's gun force to the rocket
@@ -368,6 +380,32 @@ func (g *game) Update() error {
 	return nil
 }
 
+// Goroutine
+func (g *game) killEnemy(e *enemy) {
+	e.isAlive = false
+
+	go func() {
+		ticker := time.NewTicker(time.Second * 2.0)
+		<-ticker.C
+		g.rocketManager.explosions = append(g.rocketManager.explosions, newExplosion(e.body.Position()))
+		<-ticker.C
+
+		// Delete the enemy
+		// ----------------
+		g.space.RemoveShape(e.shape)
+		g.space.RemoveBody(e.body)
+
+		// copy(g.enemies[iEnemy:], g.enemies[iEnemy+1:])
+		// g.enemies[len(g.enemies)-1] = nil
+		// g.enemies = g.enemies[:len(g.enemies)-1]
+		// --
+
+		e.drawActive = false
+
+		ticker.Stop()
+	}()
+}
+
 func (g *game) checkPlayerInteraction() {
 	if !g.input.activate {
 		return
@@ -397,6 +435,8 @@ func (g *game) checkPlayerInteraction() {
 			<-timer.C
 			showTextTerminalBlue = false
 			g.terminalBlue.trigger()
+			g.player.numLives++
+			g.player.prepareLivesIndicator()
 
 			// Remove wall
 			g.space.RemoveShape(g.eWallBlue.shape)
@@ -416,6 +456,8 @@ func (g *game) checkPlayerInteraction() {
 			<-timer.C
 			showTextTerminalOrange = false
 			g.terminalOrange.trigger()
+			g.player.numLives++
+			g.player.prepareLivesIndicator()
 
 			// Remove wall
 			g.space.RemoveShape(g.eWallOrange.shape)
@@ -479,19 +521,26 @@ func (g *game) rayCast() {
 	// Check player
 	// for enemy to detect player
 	for _, enemy := range g.enemies {
+		if !enemy.isAlive {
+			continue
+		}
 		success = g.player.shape.SegmentQuery(enemy.eyeRay[0], enemy.eyeRay[1], enemyEyeRadius, &info)
-		if success && enemy.attackCooldownSec <= 0 {
+		if success && enemy.attackCooldownSec <= 0 /*&& angle < halfPi && angle > -halfPi*/ {
 			var rocketSpawnPos cp.Vector
 			var rocketAngle float64
+			angle := enemy.body.Angle()
+			tileCosAngle := tileLength * math.Cos(angle)
+			tileSinAngle := tileLength * math.Sin(angle)
 			if enemyPos := enemy.body.Position(); enemy.turnedLeft {
 				rocketSpawnPos = enemyPos.Add(cp.Vector{
-					X: -tileLength, Y: -tileLength / 2.0,
+					X: -tileCosAngle, Y: -tileSinAngle / 2.0,
 				})
 				rocketAngle = -math.Pi
 			} else {
 				rocketSpawnPos = enemyPos.Add(cp.Vector{
-					X: tileLength, Y: -tileLength / 2.0,
+					X: tileCosAngle, Y: -tileSinAngle / 2.0,
 				})
+				rocketAngle = enemy.body.Angle()
 			}
 			g.rocketManager.rockets = append(g.rocketManager.rockets, newRocket(
 				rocketSpawnPos, rocketAngle, g.space))
@@ -610,7 +659,7 @@ func main() {
 	ebiten.SetWindowTitle("Magrix")
 	// ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
 	// ebiten.SetFPSMode(ebiten.FPSModeVsyncOffMaximum)
-	// ebiten.SetCursorMode(ebiten.CursorModeCaptured)
+	ebiten.SetCursorMode(ebiten.CursorModeCaptured)
 
 	if err := ebiten.RunGame(newGame()); err != nil {
 		log.Fatal(err)

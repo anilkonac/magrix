@@ -56,7 +56,7 @@ const (
 	gunMinAlpha  = 1e-5 // required to prevent player pos to go NaN
 )
 
-const playerStartLives = 3
+const playerStartLives = 4
 
 type gunState uint8
 
@@ -163,9 +163,9 @@ func newPlayer(pos cp.Vector, space *cp.Space) *player {
 func (p *player) update(inp *input, rayHitInfo *cp.SegmentQueryInfo) {
 	// Update position
 	p.pos = p.body.Position()
-	if p.numLives <= 0 {
-		p.body.SetMoment(100)
-	}
+	// if p.numLives <= 0 {
+	// 	p.body.SetMoment(100)
+	// }
 
 	// Update gun position
 	if p.angleGun < -halfPi || p.angleGun > halfPi {

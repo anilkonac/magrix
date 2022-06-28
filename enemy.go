@@ -13,7 +13,7 @@ import (
 const (
 	enemyMass              = 0.75
 	enemyFriction          = 0.75
-	enemyMoment            = 50
+	enemyMoment            = 250
 	enemyWidthTile         = 1
 	enemyHeightTile        = 1.5
 	enemyEyeRange          = mapWidth / 2.0
@@ -30,6 +30,8 @@ type enemy struct {
 	eyeRay            [2]cp.Vector
 	attackCooldownSec float32
 	turnedLeft        bool
+	isAlive           bool
+	drawActive        bool
 }
 
 func newEnemy(pos cp.Vector, space *cp.Space, turnedLeft bool) *enemy {
@@ -46,6 +48,8 @@ func newEnemy(pos cp.Vector, space *cp.Space, turnedLeft bool) *enemy {
 		curAnim:           *animEnemy1Idle,
 		attackCooldownSec: 0,
 		turnedLeft:        turnedLeft,
+		isAlive:           true,
+		drawActive:        true,
 	}
 	if turnedLeft {
 		enemy.drawOptions.ScaleX = -1.0
@@ -65,39 +69,54 @@ func newEnemy(pos cp.Vector, space *cp.Space, turnedLeft bool) *enemy {
 	space.AddBody(enemy.body)
 	space.AddShape(enemy.shape)
 
-	// go enemy.standUpBot()
-
 	return enemy
 }
 
-func (e *enemy) update(force *cp.Vector) {
+func (e *enemy) update(force *cp.Vector) (hasFallen bool) {
 	pos := e.body.Position()
 
 	if force != nil {
 		e.body.SetForce(*force)
 	}
 
-	// Raycast
-	angle := e.body.Angle()
-	turnMult := 1.0
-	if e.turnedLeft {
-		turnMult = -1.0
+	if e.isAlive {
+		e.body.EachArbiter(func(a *cp.Arbiter) {
+			velSq := e.body.Velocity().LengthSq()
+			// fmt.Printf("vel: %v\n", velSq)
+			if a.IsFirstContact() && velSq > 1000000 {
+				hasFallen = true
+				e.isAlive = false
+			}
+		})
+
+		// Raycast
+		angle := e.body.Angle()
+		turnMult := 1.0
+		if e.turnedLeft {
+			turnMult = -1.0
+		}
+		e.eyeRay[0] = pos
+		e.eyeRay[1] = e.eyeRay[0].Add(
+			cp.Vector{
+				X: enemyEyeRange * turnMult * math.Cos(angle), Y: enemyEyeRange * math.Sin(angle),
+			},
+		)
+
+		e.curAnim.Update(animDeltaTime)
 	}
-	e.eyeRay[0] = pos
-	e.eyeRay[1] = e.eyeRay[0].Add(
-		cp.Vector{
-			X: enemyEyeRange * turnMult * math.Cos(angle), Y: enemyEyeRange * math.Sin(angle),
-		},
-	)
 
 	// Update draw options
-	e.curAnim.Update(animDeltaTime)
 	e.drawOptions.X = pos.X
 	e.drawOptions.Y = pos.Y
 	e.drawOptions.Rotate = e.body.Angle()
+
+	return hasFallen
 }
 
 func (e *enemy) draw() {
+	if !e.drawActive {
+		return
+	}
 	e.curAnim.Draw(imageObjects, &e.drawOptions)
 }
 
