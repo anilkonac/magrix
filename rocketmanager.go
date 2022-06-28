@@ -14,6 +14,7 @@ const (
 	rocketWidth              = 8
 	rocketHeight             = 2
 	explosionTotalDurationMs = durationExplosionMs * 14
+	rocketHitForce           = 50000
 )
 
 type explosion struct {
@@ -99,6 +100,9 @@ func (m *rocketManager) update( /*playerPos *cp.Vector*/ ) (hitBodies []*cp.Body
 			m.explosions = append(m.explosions, newExplosion(rocket.body.Position()))
 			hitBodies = append(hitBodies, hitBody)
 			rocketsToBeDeleted = append(rocketsToBeDeleted, rocket)
+			velNormalized := rocket.body.Velocity().Normalize()
+			hitBody.SetForce(velNormalized.Mult(rocketHitForce))
+
 			continue
 		}
 

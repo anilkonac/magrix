@@ -56,6 +56,8 @@ const (
 	gunMinAlpha  = 1e-5 // required to prevent player pos to go NaN
 )
 
+const playerStartLives = 4
+
 type gunState uint8
 
 const (
@@ -70,29 +72,32 @@ var (
 	//go:embed assets/gun_attract.png
 	gunAttractBytes []byte
 	//go:embed assets/gun_repel.png
-	gunRepelBytes   []byte
-	imageGunIdle    *ebiten.Image
-	imageGunAttract *ebiten.Image
-	imageGunRepel   *ebiten.Image
-	imagePlayer     *ebiten.Image
+	gunRepelBytes    []byte
+	imageGunIdle     *ebiten.Image
+	imageGunAttract  *ebiten.Image
+	imageGunRepel    *ebiten.Image
+	imagePlayer      *ebiten.Image
+	imageHeart       *ebiten.Image
+	imageLives       *ebiten.Image
+	drawOptionsLives ebiten.DrawImageOptions
 )
 
 var posGunRelative cp.Vector
 
 func init() {
-	img, err := png.Decode(bytes.NewReader(gunIdleBytes))
-	panicErr(err)
-	imageGunIdle = ebiten.NewImageFromImage(img)
-
-	img, err = png.Decode(bytes.NewReader(gunAttractBytes))
-	panicErr(err)
-	imageGunAttract = ebiten.NewImageFromImage(img)
-
-	img, err = png.Decode(bytes.NewReader(gunRepelBytes))
-	panicErr(err)
-	imageGunRepel = ebiten.NewImageFromImage(img)
+	imageGunIdle = loadImage(gunIdleBytes)
+	imageGunAttract = loadImage(gunAttractBytes)
+	imageGunRepel = loadImage(gunRepelBytes)
+	imageHeart = loadImage(bytesHeart)
 
 	imagePlayer = ebiten.NewImage(16, 32)
+	imageLives = ebiten.NewImage(tileLength*5, tileLength)
+}
+
+func loadImage(bytess []byte) *ebiten.Image {
+	img, err := png.Decode(bytes.NewReader(bytess))
+	panicErr(err)
+	return ebiten.NewImageFromImage(img)
 }
 
 type player struct {
@@ -112,6 +117,7 @@ type player struct {
 	gunForce        cp.Vector
 	state           playerState
 	stateGun        gunState
+	numLives        int
 }
 
 func newPlayer(pos cp.Vector, space *cp.Space) *player {
@@ -131,8 +137,9 @@ func newPlayer(pos cp.Vector, space *cp.Space) *player {
 			ScaleX:  1.0,
 			ScaleY:  1.0,
 		},
-		state:   stateIdle,
-		curAnim: animPlayerIdle,
+		state:    stateIdle,
+		curAnim:  animPlayerIdle,
+		numLives: playerStartLives,
 	}
 
 	player.body = cp.NewBody(playerMass, cp.INFINITY)
@@ -146,12 +153,19 @@ func newPlayer(pos cp.Vector, space *cp.Space) *player {
 
 	posGunRelative = cp.Vector{X: tileLength / 7.0, Y: -tileLength / 4.0}
 
+	player.prepareLivesIndicator()
+	drawOptionsLives.GeoM.Reset()
+	drawOptionsLives.GeoM.Scale(2.5, 2.5)
+
 	return player
 }
 
-func (p *player) update(input *input, rayHitInfo *cp.SegmentQueryInfo) {
+func (p *player) update(inp *input, rayHitInfo *cp.SegmentQueryInfo) {
 	// Update position
 	p.pos = p.body.Position()
+	// if p.numLives <= 0 {
+	// 	p.body.SetMoment(100)
+	// }
 
 	// Update gun position
 	if p.angleGun < -halfPi || p.angleGun > halfPi {
@@ -161,9 +175,11 @@ func (p *player) update(input *input, rayHitInfo *cp.SegmentQueryInfo) {
 	}
 
 	// Update gun angle
-	distX := cursorX - p.posGun.X
-	distY := cursorY - p.posGun.Y
-	p.angleGun = math.Atan2(distY, distX)
+	if !gameOver {
+		distX := cursorX - p.posGun.X
+		distY := cursorY - p.posGun.Y
+		p.angleGun = math.Atan2(distY, distX)
+	}
 
 	p.checkOnGround()
 
@@ -174,7 +190,13 @@ func (p *player) update(input *input, rayHitInfo *cp.SegmentQueryInfo) {
 		X: rayLength * math.Cos(p.angleGun), Y: rayLength * math.Sin(p.angleGun),
 	})
 
-	p.handleInputs(input, rayHitInfo)
+	var inputt *input
+	if gameOver {
+		inputt = &input{}
+	} else {
+		inputt = inp
+	}
+	p.handleInputs(inputt, rayHitInfo)
 
 	switch p.state {
 	case stateWalking:
@@ -185,7 +207,9 @@ func (p *player) update(input *input, rayHitInfo *cp.SegmentQueryInfo) {
 
 	// v := p.body.Velocity()
 	// fmt.Printf("Friction: %.2f\tVel X: %.2f\tVel Y: %.2f\n", p.shape.Friction(), v.X, v.Y)
-	p.curAnim.Update(animDeltaTime)
+	if p.numLives > 0 {
+		p.curAnim.Update(animDeltaTime)
+	}
 	p.updateDrawOptions()
 
 	// fmt.Printf("p.angleGun: %v\n", p.angleGun)
@@ -207,6 +231,7 @@ func (p *player) checkOnGround() {
 
 func (p *player) handleInputs(input *input, rayHitInfo *cp.SegmentQueryInfo) {
 	p.state = stateIdle
+
 	// Handle inputs
 	var surfaceV cp.Vector
 	if input.right {
@@ -258,6 +283,9 @@ func (p *player) handleInputs(input *input, rayHitInfo *cp.SegmentQueryInfo) {
 }
 
 func (p *player) updateDrawOptions() {
+	// p.drawOptions.GeoM.Reset()
+	// p.drawOptions.GeoM.Rotate(p.body.Angle())
+	// p.drawOptions.GeoM.Concat(cam.GetTranslation(p.pos.X-tileLength/2.0, p.pos.Y-tileLength).GeoM)
 	p.drawOptions = *cam.GetTranslation(p.pos.X-tileLength/2.0, p.pos.Y-tileLength)
 
 	// Player
@@ -267,7 +295,6 @@ func (p *player) updateDrawOptions() {
 	} else {
 		p.drawOptionsAnim.ScaleX = 1.0
 		p.drawOptionsAnim.OriginX = 0.0
-
 	}
 
 	// Gun
@@ -275,6 +302,21 @@ func (p *player) updateDrawOptions() {
 	p.drawOptionsGun.GeoM.Translate(0, -p.sizeGun.Y/2.0)
 	p.drawOptionsGun.GeoM.Rotate(p.angleGun)
 	p.drawOptionsGun.GeoM.Concat(cam.GetTranslation(p.posGun.X, p.posGun.Y).GeoM)
+}
+
+func (p *player) hit() {
+	p.numLives--
+	p.prepareLivesIndicator()
+}
+
+func (p *player) prepareLivesIndicator() {
+	imageLives.Clear()
+	var drawOpt ebiten.DrawImageOptions
+	for iLife := 0; iLife < p.numLives; iLife++ {
+		drawOpt.GeoM.Reset()
+		drawOpt.GeoM.Translate(float64(iLife)*tileLength, 0)
+		imageLives.DrawImage(imageHeart, &drawOpt)
+	}
 }
 
 func (p *player) draw() {
