@@ -17,6 +17,10 @@ const (
 	rocketHitForce           = 50000
 )
 
+var rocketSpawnPosRelative = cp.Vector{
+	X: 2 * tileLength / 3.0, Y: -tileLength / 2.0,
+}
+
 type explosion struct {
 	drawOptions ganim8.DrawOptions
 	elapsedMs   int64
@@ -50,7 +54,7 @@ func newRocket(startPos cp.Vector, angle float64, space *cp.Space) *rocket {
 	body.SetPosition(startPos)
 	body.SetVelocityUpdateFunc(rocketUpdateVelocity)
 	body.SetAngle(angle)
-	body.SetVelocity(rocketVelocity*math.Cos(angle), 0)
+	body.SetVelocity(rocketVelocity*math.Cos(angle), rocketVelocity*math.Sin(angle))
 
 	shape := cp.NewBox(body, rocketWidth, rocketHeight, 0)
 	// TODO: Set elasticity and friction ?

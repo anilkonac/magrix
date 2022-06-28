@@ -514,6 +514,13 @@ func (g *game) updateSettings() {
 
 	if g.input.pausePlay {
 		gamePaused = !gamePaused
+		if gamePaused && (musicState == musicOn) {
+			playerMusic.Pause()
+			musicState = musicPaused
+		} else if musicState == musicPaused {
+			playerMusic.Play()
+			musicState = musicOn
+		}
 	}
 
 	if g.input.musicToggle {
@@ -564,22 +571,29 @@ func (g *game) rayCast() {
 			continue
 		}
 		success = g.player.shape.SegmentQuery(enemy.eyeRay[0], enemy.eyeRay[1], enemyEyeRadius, &info)
-		if success && enemy.attackCooldownSec <= 0 /*&& angle < halfPi && angle > -halfPi*/ {
+		if success && enemy.attackCooldownSec <= 0 {
+			enemyPos := enemy.body.Position()
+			enemyAngle := enemy.body.Angle()
 			var rocketSpawnPos cp.Vector
 			var rocketAngle float64
-			angle := enemy.body.Angle()
-			tileCosAngle := tileLength * math.Cos(angle)
-			tileSinAngle := tileLength * math.Sin(angle)
-			if enemyPos := enemy.body.Position(); enemy.turnedLeft {
+			if !enemy.turnedLeft {
+				rocketSpawnPosHypot := math.Hypot(rocketSpawnPosRelative.X, rocketSpawnPosRelative.Y)
+				angleSpawnPos := math.Atan2(rocketSpawnPosRelative.Y, rocketSpawnPosRelative.X)
+				newSpawnPosAngle := angleSpawnPos + enemyAngle
 				rocketSpawnPos = enemyPos.Add(cp.Vector{
-					X: -tileCosAngle, Y: -tileSinAngle / 2.0,
+					X: rocketSpawnPosHypot * math.Cos(newSpawnPosAngle), Y: rocketSpawnPosHypot * math.Sin(newSpawnPosAngle),
 				})
-				rocketAngle = -math.Pi
+				rocketAngle = enemyAngle
 			} else {
+				rocketSpawnPosRelativeLeft := cp.Vector{X: -rocketSpawnPosRelative.X, Y: rocketSpawnPos.Y}
+
+				rocketSpawnPosHypot := math.Hypot(rocketSpawnPosRelativeLeft.X, rocketSpawnPosRelativeLeft.Y)
+				angleSpawnPos := math.Atan2(rocketSpawnPosRelativeLeft.Y, rocketSpawnPosRelativeLeft.X)
+				newSpawnPosAngle := angleSpawnPos + enemyAngle
 				rocketSpawnPos = enemyPos.Add(cp.Vector{
-					X: tileCosAngle, Y: -tileSinAngle / 2.0,
+					X: rocketSpawnPosHypot * math.Cos(newSpawnPosAngle), Y: rocketSpawnPosHypot * math.Sin(newSpawnPosAngle),
 				})
-				rocketAngle = enemy.body.Angle()
+				rocketAngle = enemyAngle - math.Pi
 			}
 			g.rocketManager.rockets = append(g.rocketManager.rockets, newRocket(
 				rocketSpawnPos, rocketAngle, g.space))
