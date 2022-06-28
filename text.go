@@ -11,7 +11,7 @@ import (
 
 const (
 	dpi                   = 72
-	fontSizeIntro         = 20
+	fontSizeIntro         = 24
 	fontSizeButton        = 48
 	textIntro             = "Locating terminals that lift plasma gates..."
 	textTerminalBlue      = "Lifting the blue plasma gate"

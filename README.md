@@ -11,7 +11,13 @@ Explosion_duplicateframes.png
 * by 	MattWalkden (https://mattwalkden.itch.io/lunar-battle-pack) License CC-0
 
 ### Font
-Minecraft by Craftron Gaming - 100% Free - https://www.dafont.com/minecraft.font?l[]=10&l[]=1
+Minecraft by Craftron Gaming - https://www.dafont.com/minecraft.font?l[]=10&l[]=1  
+100% Free 
 
 ### Music
-Race to Mars by DOS88 (https://dos88.itch.io/dos-88-music-library) License: Creative Commons
+Race to Mars by DOS88 (https://dos88.itch.io/dos-88-music-library)  
+License: Creative Commons
+
+### Sound
+Explosion 4 by deleted_user_3544904 (https://freesound.org/people/deleted_user_3544904/sounds/191694/)  
+License: CC BY-NC 3.0

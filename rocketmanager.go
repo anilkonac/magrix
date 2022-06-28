@@ -102,6 +102,8 @@ func (m *rocketManager) update( /*playerPos *cp.Vector*/ ) (hitBodies []*cp.Body
 			rocketsToBeDeleted = append(rocketsToBeDeleted, rocket)
 			velNormalized := rocket.body.Velocity().Normalize()
 			hitBody.SetForce(velNormalized.Mult(rocketHitForce))
+			playerExplosion.Rewind()
+			playerExplosion.Play()
 
 			continue
 		}
