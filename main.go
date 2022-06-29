@@ -4,7 +4,6 @@ package main
 
 import (
 	"bytes"
-	"fmt"
 	"image/color"
 	"log"
 	"math"
@@ -461,14 +460,14 @@ func (g *game) checkPlayerInteraction() {
 	}
 
 	// Check if near blue terminal
-	if g.terminalBlue.pos.Distance(g.player.pos) < interactionRadius {
+	if !g.terminalBlue.triggered && (g.terminalBlue.pos.Distance(g.player.pos) < interactionRadius) {
+		g.terminalBlue.trigger()
 
 		showTextTerminalBlue = true
 		go func() {
 			timer := time.NewTimer(time.Second * durationTextTerminals)
 			<-timer.C
 			showTextTerminalBlue = false
-			g.terminalBlue.trigger()
 			g.player.numLives++
 			g.player.prepareLivesIndicator()
 
@@ -482,14 +481,14 @@ func (g *game) checkPlayerInteraction() {
 	}
 
 	// Check if near orange terminal
-	if g.terminalOrange.pos.Distance(g.player.pos) < interactionRadius {
+	if !g.terminalOrange.triggered && (g.terminalOrange.pos.Distance(g.player.pos) < interactionRadius) {
+		g.terminalOrange.trigger()
 
 		showTextTerminalOrange = true
 		go func() {
 			timer := time.NewTimer(time.Second * durationTextTerminals)
 			<-timer.C
 			showTextTerminalOrange = false
-			g.terminalOrange.trigger()
 			g.player.numLives++
 			g.player.prepareLivesIndicator()
 
@@ -503,7 +502,7 @@ func (g *game) checkPlayerInteraction() {
 	}
 
 	// Check if near the button
-	if g.button.pos.Distance(g.player.pos) < interactionRadius {
+	if !g.button.triggered && (g.button.pos.Distance(g.player.pos) < interactionRadius) {
 		g.button.trigger()
 		showTextButton = true
 	}
@@ -701,7 +700,7 @@ func (g *game) Draw(screen *ebiten.Image) {
 	screen.DrawImage(imageLives, &drawOptionsLives)
 
 	// Print fps
-	ebitenutil.DebugPrintAt(screen, fmt.Sprintf("TPS: %.2f  FPS: %.2f", ebiten.CurrentTPS(), ebiten.CurrentFPS()), screenWidth-140, 0)
+	// ebitenutil.DebugPrintAt(screen, fmt.Sprintf("TPS: %.2f  FPS: %.2f", ebiten.CurrentTPS(), ebiten.CurrentFPS()), screenWidth-140, 0)
 	// ebitenutil.DebugPrintAt(screen, fmt.Sprintf("X: %.0f, Y: %.0f", g.input.cursorPos.X, g.input.cursorPos.Y), 0, 15)
 }
 
