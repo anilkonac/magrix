@@ -3,6 +3,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"image/color"
 	"log"
@@ -38,7 +39,7 @@ const (
 	// spaceIterations      = 10
 )
 
-const mapPath = "assets/gameMap.tmx"
+const mapPath = "gameMap.tmx"
 
 const (
 	zoomMultiplier        = 0.1
@@ -89,7 +90,6 @@ var (
 	zoom             = 3.5
 	zoomMin          = 1.0
 	zoomMax          = 6.0
-	// zoomMax =
 )
 
 var (
@@ -98,6 +98,9 @@ var (
 	showArrowBlue   bool
 	showArrowOrange bool
 )
+
+//go:embed gameMap.tmx
+var bytesMap []byte
 
 func panicErr(err error) {
 	if err != nil {
@@ -173,7 +176,8 @@ func newGame() *game {
 	space.SetGravity(cp.Vector{X: 0, Y: gravity})
 
 	// Parse map file
-	gameMap, err := tiled.LoadFile(mapPath)
+	// gameMap, err := tiled.LoadFile(mapPath)
+	gameMap, err := tiled.LoadReader("", bytes.NewReader(bytesMap))
 	panicErr(err)
 	// tileLength = float64(gameMap.TileWidth)
 
@@ -203,7 +207,8 @@ func (g *game) restart() {
 	space.SetGravity(cp.Vector{X: 0, Y: gravity})
 
 	// Parse map file
-	gameMap, err := tiled.LoadFile(mapPath)
+	// gameMap, err := tiled.LoadFile(mapPath)
+	gameMap, err := tiled.LoadReader("", bytes.NewReader(bytesMap))
 	panicErr(err)
 
 	*g = game{
