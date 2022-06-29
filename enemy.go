@@ -83,7 +83,7 @@ func (e *enemy) update(force *cp.Vector) (hasFallen bool) {
 		e.body.EachArbiter(func(a *cp.Arbiter) {
 			velSq := e.body.Velocity().LengthSq()
 			// fmt.Printf("vel: %v\n", velSq)
-			if a.IsFirstContact() && velSq > 1000000 {
+			if a.IsFirstContact() && velSq > 50000 {
 				hasFallen = true
 				e.isAlive = false
 			}
