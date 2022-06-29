@@ -590,7 +590,7 @@ func (g *game) rayCast() {
 				})
 				rocketAngle = enemyAngle
 			} else {
-				rocketSpawnPosRelativeLeft := cp.Vector{X: -rocketSpawnPosRelative.X, Y: rocketSpawnPos.Y}
+				rocketSpawnPosRelativeLeft := cp.Vector{X: -rocketSpawnPosRelative.X, Y: rocketSpawnPosRelative.Y}
 
 				rocketSpawnPosHypot := math.Hypot(rocketSpawnPosRelativeLeft.X, rocketSpawnPosRelativeLeft.Y)
 				angleSpawnPos := math.Atan2(rocketSpawnPosRelativeLeft.Y, rocketSpawnPosRelativeLeft.X)
