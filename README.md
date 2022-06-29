@@ -1,4 +1,20 @@
 # magrix
+A 2d action platform game made for [Ebitengine Game Jam](https://itch.io/jam/ebiten-game-jam).  
+Submission Page: https://itch.io/jam/ebiten-game-jam/rate/1576671  
+Game Page: https://anilkonac.itch.io/magrix
+
+## Controls
+| Key | Action |
+| --- | ------ |
+| WASD | Movement |
+| W / Space | Jump |
+| E | Activate terminals/computers or buttons |
+| Mouse Wheel | Zoom in/out |
+| Mouse | Aim the weapon |
+| Mouse Left | Activate repulsion functionality |
+| Mouse Right | Activate attraction functionality |
+| M | Pause / Play Music |
+| P | Pause the game |
 
 ## Credits
 ### Tileset 
