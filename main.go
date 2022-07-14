@@ -21,12 +21,13 @@ import (
 )
 
 const (
-	screenWidth  = 960
-	screenHeight = 720
-	deltaTimeSec = 1.0 / 60.0
-	mapWidth     = 960
-	mapHeight    = 960
-	tileLength   = 16
+	screenWidth    = 960
+	screenHeight   = 720
+	deltaTimeSec   = 1.0 / 60.0
+	mapWidth       = 960
+	mapHeight      = 960
+	tileLength     = 16
+	restartTimeSec = 3
 )
 
 const (
@@ -167,6 +168,7 @@ type game struct {
 	eWallBlue      *electricWall
 	eWallOrange    *electricWall
 	button         *button
+	gameOverTimer  float32
 }
 
 func newGame() *game {
@@ -322,10 +324,6 @@ func (g *game) Update() error {
 			g.player.hit()
 			if g.player.numLives <= 0 {
 				gameOver = true
-				go func() {
-					time.Sleep(time.Second * 3)
-					g.restart()
-				}()
 			}
 		} else {
 			for _, enemy := range g.enemies {
@@ -334,6 +332,15 @@ func (g *game) Update() error {
 					g.killEnemy(enemy)
 				}
 			}
+		}
+	}
+
+	if gameOver {
+		g.gameOverTimer += deltaTimeSec
+		if g.gameOverTimer >= restartTimeSec {
+			g.restart()
+			gameOver = false
+			return nil
 		}
 	}
 
