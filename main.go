@@ -70,7 +70,7 @@ var (
 	imageArrowOrange       = ebiten.NewImage(tileLength, tileLength)
 	drawOptionsCursor      ebiten.DrawImageOptions
 	drawOptionsRayHit      ebiten.DrawImageOptions
-	drawOptionsZero        *ebiten.DrawImageOptions
+	drawOptionsZero        ebiten.DrawImageOptions
 	drawOptionsArrowBlue   ganim8.DrawOptions
 	drawOptionsArrowOrange ganim8.DrawOptions
 	drawOptionsArrowGreen  ganim8.DrawOptions
@@ -307,7 +307,8 @@ func (g *game) Update() error {
 	zoom = cp.Clamp(zoom, zoomMin, zoomMax)
 	cam.SetZoom(zoom)
 	cursorX, cursorY = cam.GetCursorCoords()
-	drawOptionsCursor = *cam.GetTranslation(cursorX-crosshairRadius, cursorY-crosshairRadius)
+	drawOptionsCursor.GeoM.Reset()
+	cam.GetTranslation(&drawOptionsCursor, cursorX-crosshairRadius, cursorY-crosshairRadius)
 
 	g.updateSettings()
 
@@ -387,8 +388,10 @@ func (g *game) Update() error {
 	// -------------------
 	const rayHitImageRadius = rayHitImageWidth / 2.0
 
-	drawOptionsZero = cam.GetTranslation(0, 0)
-	drawOptionsRayHit = *cam.GetTranslation(g.rayHitInfo.Point.X-rayHitImageRadius, g.rayHitInfo.Point.Y-rayHitImageRadius)
+	drawOptionsZero.GeoM.Reset()
+	cam.GetTranslation(&drawOptionsZero, 0, 0)
+	drawOptionsRayHit.GeoM.Reset()
+	cam.GetTranslation(&drawOptionsRayHit, g.rayHitInfo.Point.X-rayHitImageRadius, g.rayHitInfo.Point.Y-rayHitImageRadius)
 
 	// Blue arrow
 	direction := g.terminalBlue.pos.Sub(g.player.pos)
@@ -624,7 +627,7 @@ func (g *game) Draw(screen *ebiten.Image) {
 	cam.Surface.Fill(colorBackground)
 
 	// Draw decorations
-	cam.Surface.DrawImage(imageDecorations, drawOptionsZero)
+	cam.Surface.DrawImage(imageDecorations, &drawOptionsZero)
 
 	// Draw terminals
 	g.terminalIntro.draw()
@@ -650,13 +653,13 @@ func (g *game) Draw(screen *ebiten.Image) {
 	// Draw the button
 	g.button.draw()
 
-	cam.Surface.DrawImage(imageObjects, drawOptionsZero)
+	cam.Surface.DrawImage(imageObjects, &drawOptionsZero)
 
 	// Draw player and its gun
 	g.player.draw()
 
 	// Draw walls and platforms
-	cam.Surface.DrawImage(imagePlatforms, drawOptionsZero)
+	cam.Surface.DrawImage(imagePlatforms, &drawOptionsZero)
 
 	// Draw crosshair
 	cam.Surface.DrawImage(imageCrosshair, &drawOptionsCursor)

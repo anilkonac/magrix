@@ -300,7 +300,8 @@ func (p *player) updateDrawOptions() {
 	// p.drawOptions.GeoM.Reset()
 	// p.drawOptions.GeoM.Rotate(p.body.Angle())
 	// p.drawOptions.GeoM.Concat(cam.GetTranslation(p.pos.X-tileLength/2.0, p.pos.Y-tileLength).GeoM)
-	p.drawOptions = *cam.GetTranslation(p.pos.X-tileLength/2.0, p.pos.Y-tileLength)
+	p.drawOptions.GeoM.Reset()
+	cam.GetTranslation(&p.drawOptions, p.pos.X-tileLength/2.0, p.pos.Y-tileLength)
 
 	// Player
 	if p.angleGun < -halfPi || p.angleGun > halfPi {
@@ -315,7 +316,7 @@ func (p *player) updateDrawOptions() {
 	p.drawOptionsGun.GeoM.Reset()
 	p.drawOptionsGun.GeoM.Translate(0, -p.sizeGun.Y/2.0)
 	p.drawOptionsGun.GeoM.Rotate(p.angleGun)
-	p.drawOptionsGun.GeoM.Concat(cam.GetTranslation(p.posGun.X, p.posGun.Y).GeoM)
+	p.drawOptionsGun.GeoM.Concat(cam.GetTranslation(&ebiten.DrawImageOptions{}, p.posGun.X, p.posGun.Y).GeoM)
 }
 
 func (p *player) hit() {
