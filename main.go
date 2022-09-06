@@ -39,8 +39,6 @@ const (
 	// spaceIterations      = 10
 )
 
-const mapPath = "gameMap.tmx"
-
 const (
 	zoomMultiplier        = 0.1
 	uiArrowDistance       = screenHeight/2.0 - 50
@@ -60,12 +58,10 @@ var (
 )
 
 var (
-	//go:embed circle.go
+	//go:embed circle.kage.go
 	bytesCircleShader      []byte
 	imageCrosshair         = ebiten.NewImage(crosshairRadius*2, crosshairRadius*2)
 	imageRayHit            = ebiten.NewImage(rayHitImageWidth, rayHitImageWidth)
-	imageRayHitAttract     = ebiten.NewImage(rayHitImageWidth, rayHitImageWidth)
-	imageRayHitRepel       = ebiten.NewImage(rayHitImageWidth, rayHitImageWidth)
 	imageArrowBlue         = ebiten.NewImage(tileLength, tileLength)
 	imageArrowOrange       = ebiten.NewImage(tileLength, tileLength)
 	drawOptionsCursor      ebiten.DrawImageOptions
@@ -132,23 +128,10 @@ func initRayHitImages() {
 		panic(err)
 	}
 
-	// Prepare ray hit images (circle)
+	// Prepare ray hit image (circle)
 	imageRayHit.DrawRectShader(rayHitImageWidth, rayHitImageWidth, shader, &ebiten.DrawRectShaderOptions{
 		Uniforms: map[string]interface{}{
 			"Radius": float32(rayHitImageWidth / 2.0),
-			"Color":  []float32{float32(colorOrange.R) / 255.0, float32(colorOrange.G) / 255.0, float32(colorOrange.B) / 255.0, float32(colorOrange.A) / 255.0},
-		},
-	})
-	imageRayHitAttract.DrawRectShader(rayHitImageWidth, rayHitImageWidth, shader, &ebiten.DrawRectShaderOptions{
-		Uniforms: map[string]interface{}{
-			"Radius": float32(rayHitImageWidth / 2.0),
-			"Color":  []float32{float32(colorGunAttract.R) / 255.0, float32(colorGunAttract.G) / 255.0, float32(colorGunAttract.B) / 255.0, float32(colorGunAttract.A) / 255.0},
-		},
-	})
-	imageRayHitRepel.DrawRectShader(rayHitImageWidth, rayHitImageWidth, shader, &ebiten.DrawRectShaderOptions{
-		Uniforms: map[string]interface{}{
-			"Radius": float32(rayHitImageWidth / 2.0),
-			"Color":  []float32{float32(colorGunRepel.R) / 255.0, float32(colorGunRepel.G) / 255.0, float32(colorGunRepel.B) / 255.0, float32(colorGunRepel.A) / 255.0},
 		},
 	})
 }
@@ -665,15 +648,15 @@ func (g *game) Draw(screen *ebiten.Image) {
 	cam.Surface.DrawImage(imageCrosshair, &drawOptionsCursor)
 
 	// Draw rayhit
-	var imageHit *ebiten.Image
+	drawOptionsRayHit.ColorM.Reset()
 	if g.input.attract {
-		imageHit = imageRayHitAttract
+		drawOptionsRayHit.ColorM.ScaleWithColor(colorGunAttract)
 	} else if g.input.repel {
-		imageHit = imageRayHitRepel
+		drawOptionsRayHit.ColorM.ScaleWithColor(colorGunRepel)
 	} else {
-		imageHit = imageRayHit
+		drawOptionsRayHit.ColorM.ScaleWithColor(colorOrange)
 	}
-	cam.Surface.DrawImage(imageHit, &drawOptionsRayHit)
+	cam.Surface.DrawImage(imageRayHit, &drawOptionsRayHit)
 
 	cam.Blit(screen)
 
