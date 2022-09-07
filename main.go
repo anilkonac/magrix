@@ -4,6 +4,7 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"image/color"
 	"log"
 	"math"
@@ -144,6 +145,7 @@ type game struct {
 	walls          []*cp.Shape
 	space          *cp.Space
 	input          input
+	inputGunPrev   gunInput
 	rayHitInfo     cp.SegmentQueryInfo
 	rocketManager  rocketManager
 	terminalBlue   *terminal
@@ -182,6 +184,7 @@ func newGame() *game {
 	drawOptionsArrowOrange.ScaleY = 2.0
 	drawOptionsArrowGreen.ScaleX = 2.0
 	drawOptionsArrowGreen.ScaleY = 2.0
+	drawOptionsRayHit.ColorM.ScaleWithColor(colorOrange)
 
 	return game
 }
@@ -349,7 +352,7 @@ func (g *game) Update() error {
 		}
 	}
 	// Send the negative of the player's gun force to the rocket
-	if g.input.attract || g.input.repel {
+	if g.input.gun != gunInputNone {
 		for _, rocket := range g.rocketManager.rockets {
 			if g.rayHitInfo.Shape == rocket.shape {
 				force = g.player.gunForce.Neg()
@@ -368,14 +371,33 @@ func (g *game) Update() error {
 		g.eWallOrange.update()
 	}
 
-	// Update draw options
-	// -------------------
+	g.updateDrawOptions()
+
+	g.inputGunPrev = g.input.gun
+
+	return nil
+}
+
+func (g *game) updateDrawOptions() {
 	const rayHitImageRadius = rayHitImageWidth / 2.0
 
 	drawOptionsZero.GeoM.Reset()
 	cam.GetTranslation(&drawOptionsZero, 0, 0)
+
+	// Update ray hit image's draw options
 	drawOptionsRayHit.GeoM.Reset()
 	cam.GetTranslation(&drawOptionsRayHit, g.rayHitInfo.Point.X-rayHitImageRadius, g.rayHitInfo.Point.Y-rayHitImageRadius)
+
+	if g.input.gun != g.inputGunPrev {
+		drawOptionsRayHit.ColorM.Reset()
+		if g.input.gun == gunInputAttract {
+			drawOptionsRayHit.ColorM.ScaleWithColor(colorGunAttract)
+		} else if g.input.gun == gunInputRepel {
+			drawOptionsRayHit.ColorM.ScaleWithColor(colorGunRepel)
+		} else {
+			drawOptionsRayHit.ColorM.ScaleWithColor(colorOrange)
+		}
+	}
 
 	// Blue arrow
 	direction := g.terminalBlue.pos.Sub(g.player.pos)
@@ -402,8 +424,6 @@ func (g *game) Update() error {
 		drawOptionsArrowOrange.X = screenWidth/2.0 + uiArrowDistance*math.Cos(dirAngle)
 		drawOptionsArrowOrange.Y = screenHeight/2.0 + uiArrowDistance*math.Sin(dirAngle)
 	}
-
-	return nil
 }
 
 // Goroutine
@@ -506,7 +526,7 @@ func (g *game) updateSettings() {
 	// Escape from cursor captured mode
 	if g.input.escape {
 		ebiten.SetCursorMode(ebiten.CursorModeHidden)
-	} else if (ebiten.CursorMode() == ebiten.CursorModeHidden) && g.input.repel {
+	} else if (ebiten.CursorMode() == ebiten.CursorModeHidden) && (g.input.gun == gunInputRepel) {
 		ebiten.SetCursorMode(ebiten.CursorModeCaptured)
 	}
 
@@ -649,14 +669,6 @@ func (g *game) Draw(screen *ebiten.Image) {
 	cam.Surface.DrawImage(imageCrosshair, &drawOptionsCursor)
 
 	// Draw rayhit
-	drawOptionsRayHit.ColorM.Reset()
-	if g.input.attract {
-		drawOptionsRayHit.ColorM.ScaleWithColor(colorGunAttract)
-	} else if g.input.repel {
-		drawOptionsRayHit.ColorM.ScaleWithColor(colorGunRepel)
-	} else {
-		drawOptionsRayHit.ColorM.ScaleWithColor(colorOrange)
-	}
 	cam.Surface.DrawImage(imageRayHit, &drawOptionsRayHit)
 
 	cam.Blit(screen)
@@ -694,7 +706,7 @@ func (g *game) Draw(screen *ebiten.Image) {
 	screen.DrawImage(imageLives, &drawOptionsLives)
 
 	// Print fps
-	// ebitenutil.DebugPrintAt(screen, fmt.Sprintf("TPS: %.2f  FPS: %.2f", ebiten.ActualTPS(), ebiten.ActualFPS()), screenWidth-140, 0)
+	ebitenutil.DebugPrintAt(screen, fmt.Sprintf("TPS: %.2f  FPS: %.2f", ebiten.ActualTPS(), ebiten.ActualFPS()), screenWidth-140, 0)
 	// ebitenutil.DebugPrintAt(screen, fmt.Sprintf("X: %.0f, Y: %.0f", g.input.cursorPos.X, g.input.cursorPos.Y), 0, 15)
 }
 
@@ -709,7 +721,7 @@ func main() {
 	ebiten.SetWindowSize(screenWidth, screenHeight)
 	ebiten.SetWindowTitle("Magrix")
 	// ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
-	// ebiten.SetFPSMode(ebiten.FPSModeVsyncOffMaximum)
+	ebiten.SetFPSMode(ebiten.FPSModeVsyncOffMaximum)
 	ebiten.SetCursorMode(ebiten.CursorModeCaptured)
 
 	if err := ebiten.RunGame(newGame()); err != nil {

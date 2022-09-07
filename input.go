@@ -6,13 +6,20 @@ import (
 	"github.com/jakecoffman/cp"
 )
 
+type gunInput uint8
+
+const (
+	gunInputNone gunInput = iota
+	gunInputAttract
+	gunInputRepel
+)
+
 type input struct {
 	cursorPos cp.Vector
 	up/*, down*/ bool
 	left, right bool
 
-	attract bool
-	repel   bool
+	gun gunInput
 
 	activate bool
 
@@ -33,8 +40,19 @@ func (i *input) update() {
 	i.up = ebiten.IsKeyPressed(ebiten.KeyW) || ebiten.IsKeyPressed(ebiten.KeyUp) || ebiten.IsKeyPressed(ebiten.KeySpace)
 	// i.down = ebiten.IsKeyPressed(ebiten.KeyA) || ebiten.IsKeyPressed(ebiten.KeyDown) || ebiten.IsKeyPressed(ebiten.KeyControlLeft)
 
-	i.attract = ebiten.IsMouseButtonPressed(ebiten.MouseButtonRight)
-	i.repel = ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft)
+	pressedMouseLeft := ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft)
+	pressedMouseRight := ebiten.IsMouseButtonPressed(ebiten.MouseButtonRight)
+
+	// Update mouse press actions
+	if pressedMouseLeft && pressedMouseRight {
+		i.gun = gunInputNone
+	} else if pressedMouseLeft {
+		i.gun = gunInputRepel
+	} else if pressedMouseRight {
+		i.gun = gunInputAttract
+	} else {
+		i.gun = gunInputNone
+	}
 
 	i.activate = inpututil.IsKeyJustPressed(ebiten.KeyE)
 

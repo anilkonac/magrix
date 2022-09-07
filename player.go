@@ -276,13 +276,13 @@ func (p *player) handleInputs(input *input, rayHitInfo *cp.SegmentQueryInfo) {
 
 	// Apply magnetic force if fire is pressed
 	p.gunForce = cp.Vector{}
-	if (input.attract || input.repel) && rayHitInfo.Alpha >= gunMinAlpha {
+	if (input.gun != gunInputNone) && rayHitInfo.Alpha >= gunMinAlpha {
 		forceDirection := rayHitInfo.Point.Sub(p.pos).Normalize()
 		p.gunForce = forceDirection.Mult(gunForceMult).Mult(1 / (rayHitInfo.Alpha * rayHitInfo.Alpha))
 		p.gunForce = p.gunForce.Clamp(gunForceMax)
 
 		p.stateGun = gunStateAttract
-		if input.repel {
+		if input.gun == gunInputRepel {
 			p.gunForce = p.gunForce.Neg()
 			p.stateGun = gunStateRepel
 		}
