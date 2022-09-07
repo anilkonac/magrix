@@ -18,7 +18,6 @@ import (
 	"github.com/lafriks/go-tiled"
 	"github.com/lafriks/go-tiled/render"
 	camera "github.com/melonfunction/ebiten-camera"
-	"github.com/yohamta/ganim8/v2"
 )
 
 const (
@@ -63,16 +62,16 @@ var (
 	bytesCircleShader      []byte
 	imageCrosshair         = ebiten.NewImage(crosshairRadius*2, crosshairRadius*2)
 	imageRayHit            = ebiten.NewImage(rayHitImageWidth, rayHitImageWidth)
-	imageArrowBlue         = ebiten.NewImage(tileLength, tileLength)
-	imageArrowOrange       = ebiten.NewImage(tileLength, tileLength)
+	imageArrow             = ebiten.NewImage(tileLength, tileLength)
 	drawOptionsCursor      ebiten.DrawImageOptions
 	drawOptionsRayHit      ebiten.DrawImageOptions
 	drawOptionsZero        ebiten.DrawImageOptions
-	drawOptionsArrowBlue   ganim8.DrawOptions
-	drawOptionsArrowOrange ganim8.DrawOptions
-	drawOptionsArrowGreen  ganim8.DrawOptions
+	drawOptionsArrowBlue   ebiten.DrawImageOptions
+	drawOptionsArrowOrange ebiten.DrawImageOptions
 	//go:embed assets/heart.png
 	bytesHeart []byte
+	//go:embed assets/arrow.png
+	bytesArrow []byte
 )
 
 var (
@@ -108,8 +107,12 @@ func panicErr(err error) {
 func init() {
 	initCursorImage()
 	initRayHitImage()
-	imageArrowBlue.Fill(colorBlue)
-	imageArrowOrange.Fill(colorOrange)
+	imageArrow = loadImage(bytesArrow)
+
+	// init color matrices
+	drawOptionsArrowBlue.ColorM.ScaleWithColor(colorBlue)
+	drawOptionsArrowOrange.ColorM.ScaleWithColor(colorOrange)
+	drawOptionsRayHit.ColorM.ScaleWithColor(colorOrange)
 }
 
 func initCursorImage() {
@@ -177,14 +180,6 @@ func newGame() *game {
 	cam.Zoom(zoom)
 
 	game.loadMap(gameMap)
-
-	drawOptionsArrowBlue.ScaleX = 2.0
-	drawOptionsArrowBlue.ScaleY = 2.0
-	drawOptionsArrowOrange.ScaleX = 2.0
-	drawOptionsArrowOrange.ScaleY = 2.0
-	drawOptionsArrowGreen.ScaleX = 2.0
-	drawOptionsArrowGreen.ScaleY = 2.0
-	drawOptionsRayHit.ColorM.ScaleWithColor(colorOrange)
 
 	return game
 }
@@ -407,9 +402,13 @@ func (g *game) updateDrawOptions() {
 	} else if g.terminalIntro.triggered && !g.terminalBlue.triggered {
 		showArrowBlue = true
 		dirAngle := math.Atan2(direction.Y, direction.X)
-		drawOptionsArrowBlue.Rotate = dirAngle
-		drawOptionsArrowBlue.X = screenWidth/2.0 + uiArrowDistance*math.Cos(dirAngle)
-		drawOptionsArrowBlue.Y = screenHeight/2.0 + uiArrowDistance*math.Sin(dirAngle)
+		drawOptionsArrowBlue.GeoM.Reset()
+		drawOptionsArrowBlue.GeoM.Scale(2.0, 2.0)
+		drawOptionsArrowBlue.GeoM.Rotate(dirAngle)
+		drawOptionsArrowBlue.GeoM.Translate(
+			screenWidth/2.0+uiArrowDistance*math.Cos(dirAngle),
+			screenHeight/2.0+uiArrowDistance*math.Sin(dirAngle),
+		)
 	}
 
 	// Orange arrow
@@ -420,9 +419,13 @@ func (g *game) updateDrawOptions() {
 	} else if g.terminalIntro.triggered && !g.terminalOrange.triggered {
 		showArrowOrange = true
 		dirAngle := math.Atan2(direction.Y, direction.X)
-		drawOptionsArrowOrange.Rotate = dirAngle
-		drawOptionsArrowOrange.X = screenWidth/2.0 + uiArrowDistance*math.Cos(dirAngle)
-		drawOptionsArrowOrange.Y = screenHeight/2.0 + uiArrowDistance*math.Sin(dirAngle)
+		drawOptionsArrowOrange.GeoM.Reset()
+		drawOptionsArrowOrange.GeoM.Scale(2.0, 2.0)
+		drawOptionsArrowOrange.GeoM.Rotate(dirAngle)
+		drawOptionsArrowOrange.GeoM.Translate(
+			screenWidth/2.0+uiArrowDistance*math.Cos(dirAngle),
+			screenHeight/2.0+uiArrowDistance*math.Sin(dirAngle),
+		)
 	}
 }
 
@@ -694,12 +697,11 @@ func (g *game) Draw(screen *ebiten.Image) {
 	}
 
 	if showArrowBlue {
-		spriteArrows.Draw(screen, 1, &drawOptionsArrowBlue)
-
+		screen.DrawImage(imageArrow, &drawOptionsArrowBlue)
 	}
 
 	if showArrowOrange {
-		spriteArrows.Draw(screen, 0, &drawOptionsArrowOrange)
+		screen.DrawImage(imageArrow, &drawOptionsArrowOrange)
 	}
 
 	// Draw hearts

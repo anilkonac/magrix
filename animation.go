@@ -47,8 +47,6 @@ var (
 	bytesTerminalOrange []byte
 	//go:embed assets/terminal_green.png
 	bytesTerminalGreen []byte
-	//go:embed assets/arrows.png
-	bytesArrows []byte
 	//go:embed assets/theButton.png
 	bytesButton []byte
 )
@@ -64,7 +62,6 @@ var (
 	spriteTerminalBlue   *ganim8.Sprite
 	spriteTerminalOrange *ganim8.Sprite
 	spriteTerminalGreen  *ganim8.Sprite
-	spriteArrows         *ganim8.Sprite
 	spriteButton         *ganim8.Sprite
 )
 
@@ -79,7 +76,6 @@ func init() {
 	spriteTerminalBlue = newSprite("1-2", 1, bytesTerminalBlue, 16, 32, 32, 32)
 	spriteTerminalOrange = newSprite("1-2", 1, bytesTerminalOrange, 16, 32, 32, 32)
 	spriteTerminalGreen = newSprite("1-2", 1, bytesTerminalGreen, 16, 32, 32, 32)
-	spriteArrows = newSprite("1-3", 1, bytesArrows, tileLength, tileLength, tileLength*3, tileLength)
 	spriteButton = newSprite("1-2", 1, bytesButton, tileLength, tileLength, 32, 16)
 }
 

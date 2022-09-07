@@ -94,8 +94,8 @@ func init() {
 	imageLives = ebiten.NewImage(tileLength*5, tileLength)
 }
 
-func loadImage(bytess []byte) *ebiten.Image {
-	img, err := png.Decode(bytes.NewReader(bytess))
+func loadImage(imageBytes []byte) *ebiten.Image {
+	img, err := png.Decode(bytes.NewReader(imageBytes))
 	panicErr(err)
 	return ebiten.NewImageFromImage(img)
 }
