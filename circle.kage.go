@@ -5,7 +5,7 @@ package main
 var Radius float
 
 func Fragment(position vec4, texCoord vec2, color vec4) vec4 {
-	center := vec2(Radius, Radius)
+	center := vec2(Radius)
 	if distance(texCoord, center) >= Radius {
 		return vec4(0.0)
 	}

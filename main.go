@@ -106,7 +106,7 @@ func panicErr(err error) {
 
 func init() {
 	initCursorImage()
-	initRayHitImages()
+	initRayHitImage()
 	imageArrowBlue.Fill(colorBlue)
 	imageArrowOrange.Fill(colorOrange)
 }
@@ -122,11 +122,12 @@ func initCursorImage() {
 		crosshairRadius, 2*crosshairRadius, colorCrosshair)
 }
 
-func initRayHitImages() {
+func initRayHitImage() {
 	shader, err := ebiten.NewShader(bytesCircleShader)
 	if err != nil {
 		panic(err)
 	}
+	defer shader.Dispose()
 
 	// Prepare ray hit image (circle)
 	imageRayHit.DrawRectShader(rayHitImageWidth, rayHitImageWidth, shader, &ebiten.DrawRectShaderOptions{
@@ -693,7 +694,7 @@ func (g *game) Draw(screen *ebiten.Image) {
 	screen.DrawImage(imageLives, &drawOptionsLives)
 
 	// Print fps
-	// ebitenutil.DebugPrintAt(screen, fmt.Sprintf("TPS: %.2f  FPS: %.2f", ebiten.CurrentTPS(), ebiten.CurrentFPS()), screenWidth-140, 0)
+	// ebitenutil.DebugPrintAt(screen, fmt.Sprintf("TPS: %.2f  FPS: %.2f", ebiten.ActualTPS(), ebiten.ActualFPS()), screenWidth-140, 0)
 	// ebitenutil.DebugPrintAt(screen, fmt.Sprintf("X: %.0f, Y: %.0f", g.input.cursorPos.X, g.input.cursorPos.Y), 0, 15)
 }
 
