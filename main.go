@@ -63,15 +63,11 @@ var (
 	imageCrosshair         = ebiten.NewImage(crosshairRadius*2, crosshairRadius*2)
 	imageRayHit            = ebiten.NewImage(rayHitImageWidth, rayHitImageWidth)
 	imageArrow             = ebiten.NewImage(tileLength, tileLength)
-	drawOptionsCursor      ebiten.DrawImageOptions
+	drawOptionsCrosshair   ebiten.DrawImageOptions
 	drawOptionsRayHit      ebiten.DrawImageOptions
 	drawOptionsZero        ebiten.DrawImageOptions
 	drawOptionsArrowBlue   ebiten.DrawImageOptions
 	drawOptionsArrowOrange ebiten.DrawImageOptions
-	//go:embed assets/heart.png
-	bytesHeart []byte
-	//go:embed assets/arrow.png
-	bytesArrow []byte
 )
 
 var (
@@ -289,8 +285,8 @@ func (g *game) Update() error {
 	zoom = cp.Clamp(zoom, zoomMin, zoomMax)
 	cam.SetZoom(zoom)
 	cursorX, cursorY = cam.GetCursorCoords()
-	drawOptionsCursor.GeoM.Reset()
-	cam.GetTranslation(&drawOptionsCursor, cursorX-crosshairRadius, cursorY-crosshairRadius)
+	drawOptionsCrosshair.GeoM.Reset()
+	cam.GetTranslation(&drawOptionsCrosshair, cursorX-crosshairRadius, cursorY-crosshairRadius)
 
 	g.updateSettings()
 
@@ -669,7 +665,7 @@ func (g *game) Draw(screen *ebiten.Image) {
 	cam.Surface.DrawImage(imagePlatforms, &drawOptionsZero)
 
 	// Draw crosshair
-	cam.Surface.DrawImage(imageCrosshair, &drawOptionsCursor)
+	cam.Surface.DrawImage(imageCrosshair, &drawOptionsCrosshair)
 
 	// Draw rayhit
 	cam.Surface.DrawImage(imageRayHit, &drawOptionsRayHit)
@@ -723,7 +719,7 @@ func main() {
 	ebiten.SetWindowSize(screenWidth, screenHeight)
 	ebiten.SetWindowTitle("Magrix")
 	// ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
-	ebiten.SetFPSMode(ebiten.FPSModeVsyncOffMaximum)
+	// ebiten.SetFPSMode(ebiten.FPSModeVsyncOffMaximum)
 	ebiten.SetCursorMode(ebiten.CursorModeCaptured)
 
 	if err := ebiten.RunGame(newGame()); err != nil {
