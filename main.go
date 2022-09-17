@@ -12,6 +12,7 @@ import (
 
 	_ "embed"
 
+	"github.com/anilkonac/magrix/asset"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/jakecoffman/cp"
@@ -103,7 +104,7 @@ func panicErr(err error) {
 func init() {
 	initCursorImage()
 	initRayHitImage()
-	imageArrow = loadImage(bytesArrow)
+	imageArrow = loadImage(asset.Bytes(asset.ImageArrow))
 
 	// init color matrices
 	drawOptionsArrowBlue.ColorM.ScaleWithColor(colorBlue)

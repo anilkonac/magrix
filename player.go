@@ -9,6 +9,7 @@ import (
 
 	_ "embed"
 
+	"github.com/anilkonac/magrix/asset"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/jakecoffman/cp"
 	"github.com/yohamta/ganim8/v2"
@@ -67,15 +68,9 @@ const (
 )
 
 var (
-	//go:embed assets/gun_idle.png
-	gunIdleBytes []byte
-	//go:embed assets/gun_attract.png
-	gunAttractBytes []byte
-	//go:embed assets/gun_repel.png
-	gunRepelBytes    []byte
-	imageGunIdle     *ebiten.Image
-	imageGunAttract  *ebiten.Image
-	imageGunRepel    *ebiten.Image
+	imageGunIdle     = ebiten.NewImage(gridWidthGun, gridHeightGun)
+	imageGunAttract  = ebiten.NewImage(gridWidthGun, gridHeightGun)
+	imageGunRepel    = ebiten.NewImage(gridWidthGun, gridHeightGun)
 	imagePlayer      *ebiten.Image
 	imageHeart       *ebiten.Image
 	imageLives       *ebiten.Image
@@ -85,11 +80,16 @@ var (
 var posGunRelative = cp.Vector{X: tileLength / 7.0, Y: -tileLength / 4.0}
 
 func init() {
-	imageGunIdle = loadImage(gunIdleBytes)
-	imageGunAttract = loadImage(gunAttractBytes)
-	imageGunRepel = loadImage(gunRepelBytes)
-	imageHeart = loadImage(bytesHeart)
+	// TODO: Draw gun images directly to the screen
+	drawOptionsGun := ganim8.DrawOptions{
+		ScaleX: 1.0,
+		ScaleY: 1.0,
+	}
+	spriteGun.Draw(imageGunIdle, 0, &drawOptionsGun)
+	spriteGun.Draw(imageGunAttract, 1, &drawOptionsGun)
+	spriteGun.Draw(imageGunRepel, 2, &drawOptionsGun)
 
+	imageHeart = loadImage(asset.Bytes(asset.ImageHeart))
 	imagePlayer = ebiten.NewImage(16, 32)
 	imageLives = ebiten.NewImage(tileLength*5, tileLength)
 }
