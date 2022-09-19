@@ -12,6 +12,7 @@ import (
 
 	_ "embed"
 
+	"github.com/anilkonac/magrix/asset"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/jakecoffman/cp"
@@ -63,15 +64,11 @@ var (
 	imageCrosshair         = ebiten.NewImage(crosshairRadius*2, crosshairRadius*2)
 	imageRayHit            = ebiten.NewImage(rayHitImageWidth, rayHitImageWidth)
 	imageArrow             = ebiten.NewImage(tileLength, tileLength)
-	drawOptionsCursor      ebiten.DrawImageOptions
+	drawOptionsCrosshair   ebiten.DrawImageOptions
 	drawOptionsRayHit      ebiten.DrawImageOptions
 	drawOptionsZero        ebiten.DrawImageOptions
 	drawOptionsArrowBlue   ebiten.DrawImageOptions
 	drawOptionsArrowOrange ebiten.DrawImageOptions
-	//go:embed assets/heart.png
-	bytesHeart []byte
-	//go:embed assets/arrow.png
-	bytesArrow []byte
 )
 
 var (
@@ -95,9 +92,6 @@ var (
 	showArrowOrange bool
 )
 
-//go:embed gameMap.tmx
-var bytesMap []byte
-
 func panicErr(err error) {
 	if err != nil {
 		panic(err)
@@ -107,7 +101,7 @@ func panicErr(err error) {
 func init() {
 	initCursorImage()
 	initRayHitImage()
-	imageArrow = loadImage(bytesArrow)
+	imageArrow = loadImage(asset.Bytes(asset.ImageArrow))
 
 	// init color matrices
 	drawOptionsArrowBlue.ColorM.ScaleWithColor(colorBlue)
@@ -167,7 +161,7 @@ func newGame() *game {
 
 	// Parse map file
 	// gameMap, err := tiled.LoadFile(mapPath)
-	gameMap, err := tiled.LoadReader("", bytes.NewReader(bytesMap))
+	gameMap, err := tiled.LoadReader("", bytes.NewReader(asset.Bytes(asset.Map)))
 	panicErr(err)
 	// tileLength = float64(gameMap.TileWidth)
 
@@ -191,7 +185,7 @@ func (g *game) restart() {
 
 	// Parse map file
 	// gameMap, err := tiled.LoadFile(mapPath)
-	gameMap, err := tiled.LoadReader("", bytes.NewReader(bytesMap))
+	gameMap, err := tiled.LoadReader("", bytes.NewReader(asset.Bytes(asset.Map)))
 	panicErr(err)
 
 	*g = game{
@@ -289,8 +283,8 @@ func (g *game) Update() error {
 	zoom = cp.Clamp(zoom, zoomMin, zoomMax)
 	cam.SetZoom(zoom)
 	cursorX, cursorY = cam.GetCursorCoords()
-	drawOptionsCursor.GeoM.Reset()
-	cam.GetTranslation(&drawOptionsCursor, cursorX-crosshairRadius, cursorY-crosshairRadius)
+	drawOptionsCrosshair.GeoM.Reset()
+	cam.GetTranslation(&drawOptionsCrosshair, cursorX-crosshairRadius, cursorY-crosshairRadius)
 
 	g.updateSettings()
 
@@ -396,8 +390,8 @@ func (g *game) updateDrawOptions() {
 
 	// Blue arrow
 	direction := g.terminalBlue.pos.Sub(g.player.pos)
-	distance := direction.LengthSq()
-	if distance < 10*screenWidth {
+	distanceSq := direction.LengthSq()
+	if distanceSq < 10*screenWidth {
 		showArrowBlue = false
 	} else if g.terminalIntro.triggered && !g.terminalBlue.triggered {
 		showArrowBlue = true
@@ -413,8 +407,8 @@ func (g *game) updateDrawOptions() {
 
 	// Orange arrow
 	direction = g.terminalOrange.pos.Sub(g.player.pos)
-	distance = direction.LengthSq()
-	if distance < 10*screenWidth {
+	distanceSq = direction.LengthSq()
+	if distanceSq < 10*screenWidth {
 		showArrowOrange = false
 	} else if g.terminalIntro.triggered && !g.terminalOrange.triggered {
 		showArrowOrange = true
@@ -669,7 +663,7 @@ func (g *game) Draw(screen *ebiten.Image) {
 	cam.Surface.DrawImage(imagePlatforms, &drawOptionsZero)
 
 	// Draw crosshair
-	cam.Surface.DrawImage(imageCrosshair, &drawOptionsCursor)
+	cam.Surface.DrawImage(imageCrosshair, &drawOptionsCrosshair)
 
 	// Draw rayhit
 	cam.Surface.DrawImage(imageRayHit, &drawOptionsRayHit)
@@ -723,7 +717,7 @@ func main() {
 	ebiten.SetWindowSize(screenWidth, screenHeight)
 	ebiten.SetWindowTitle("Magrix")
 	// ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
-	ebiten.SetFPSMode(ebiten.FPSModeVsyncOffMaximum)
+	// ebiten.SetFPSMode(ebiten.FPSModeVsyncOffMaximum)
 	ebiten.SetCursorMode(ebiten.CursorModeCaptured)
 
 	if err := ebiten.RunGame(newGame()); err != nil {

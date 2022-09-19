@@ -4,8 +4,7 @@ import (
 	"bytes"
 	"time"
 
-	_ "embed"
-
+	"github.com/anilkonac/magrix/asset"
 	"github.com/hajimehoshi/ebiten/v2/audio"
 	"github.com/hajimehoshi/ebiten/v2/audio/vorbis"
 	"github.com/hajimehoshi/ebiten/v2/audio/wav"
@@ -27,19 +26,15 @@ const (
 )
 
 var (
-	//go:embed assets/sounds/RaceToMars.ogg
-	bytesMusic []byte
-	//go:embed assets/sounds/explosion.wav
-	bytesSoundExplosion []byte
-	playerMusic         *audio.Player
-	playerExplosion     *audio.Player
-	musicState          stateMusic
+	playerMusic     *audio.Player
+	playerExplosion *audio.Player
+	musicState      stateMusic
 )
 
 func init() {
 
 	audioContext := audio.NewContext(sampleRate)
-	streamMusic, err := vorbis.DecodeWithSampleRate(sampleRate, bytes.NewReader(bytesMusic))
+	streamMusic, err := vorbis.DecodeWithSampleRate(sampleRate, bytes.NewReader(asset.Bytes(asset.Music)))
 	panicErr(err)
 
 	playerMusic, err = audioContext.NewPlayer(streamMusic)
@@ -49,7 +44,7 @@ func init() {
 	playerMusic.Play()
 	go repeatMusic()
 
-	streamSound, err := wav.DecodeWithSampleRate(sampleRate, bytes.NewReader(bytesSoundExplosion))
+	streamSound, err := wav.DecodeWithSampleRate(sampleRate, bytes.NewReader(asset.Bytes(asset.SoundExplosion)))
 	panicErr(err)
 
 	playerExplosion, err = audioContext.NewPlayer(streamSound)

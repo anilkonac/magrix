@@ -1,8 +1,7 @@
 package main
 
 import (
-	_ "embed"
-
+	"github.com/anilkonac/magrix/asset"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/text"
 	"golang.org/x/image/font"
@@ -24,8 +23,6 @@ const (
 )
 
 var (
-	//go:embed assets/fonts/Minecraft.ttf
-	bytesFontMinecraft            []byte
 	fontFaceIntro                 font.Face
 	fontFaceButton                font.Face
 	showTextIntro                 bool
@@ -45,7 +42,7 @@ var (
 )
 
 func init() {
-	tt, err := opentype.Parse(bytesFontMinecraft)
+	tt, err := opentype.Parse(asset.Bytes(asset.FontMinecraft))
 	panicErr(err)
 
 	fontFaceIntro, err = opentype.NewFace(tt, &opentype.FaceOptions{

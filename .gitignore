@@ -6,3 +6,5 @@
 magrix
 
 *.exe
+
+.DS_Store
