@@ -155,25 +155,8 @@ type game struct {
 }
 
 func newGame() *game {
-	space := cp.NewSpace()
-	// space.Iterations = spaceIterations
-	space.SetGravity(cp.Vector{X: 0, Y: gravity})
-
-	// Parse map file
-	// gameMap, err := tiled.LoadFile(mapPath)
-	gameMap, err := tiled.LoadReader("", bytes.NewReader(asset.Bytes(asset.Map)))
-	panicErr(err)
-	// tileLength = float64(gameMap.TileWidth)
-
-	game := &game{
-		space: space,
-		rocketManager: rocketManager{
-			space: space,
-		},
-	}
-	cam.Zoom(zoom)
-
-	game.loadMap(gameMap)
+	game := new(game)
+	game.restart()
 
 	return game
 }
@@ -183,21 +166,19 @@ func (g *game) restart() {
 	// space.Iterations = spaceIterations
 	space.SetGravity(cp.Vector{X: 0, Y: gravity})
 
-	// Parse map file
-	// gameMap, err := tiled.LoadFile(mapPath)
-	gameMap, err := tiled.LoadReader("", bytes.NewReader(asset.Bytes(asset.Map)))
-	panicErr(err)
-
 	*g = game{
 		space: space,
 		rocketManager: rocketManager{
 			space: space,
 		},
 	}
-	cam.Zoom(zoom)
 
+	// Parse map file
+	gameMap, err := tiled.LoadReader("", bytes.NewReader(asset.Bytes(asset.Map)))
+	panicErr(err)
 	g.loadMap(gameMap)
 
+	cam.Zoom(zoom)
 	gameOver = false
 	showArrowBlue = false
 	showArrowOrange = false
