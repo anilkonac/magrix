@@ -3,8 +3,6 @@
 package main
 
 import (
-	"bytes"
-	"image/png"
 	"math"
 
 	"github.com/anilkonac/magrix/asset"
@@ -87,15 +85,9 @@ func init() {
 	spriteGun.Draw(imageGunAttract, 1, &drawOptionsGun)
 	spriteGun.Draw(imageGunRepel, 2, &drawOptionsGun)
 
-	imageHeart = loadImage(asset.Bytes(asset.ImageHeart))
+	imageHeart = asset.Image(asset.ImageHeart)
 	imagePlayer = ebiten.NewImage(16, 32)
 	imageLives = ebiten.NewImage(tileLength*5, tileLength)
-}
-
-func loadImage(imageBytes []byte) *ebiten.Image {
-	img, err := png.Decode(bytes.NewReader(imageBytes))
-	panicErr(err)
-	return ebiten.NewImageFromImage(img)
 }
 
 type player struct {

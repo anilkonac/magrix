@@ -1,6 +1,12 @@
 package asset
 
-import "embed"
+import (
+	"bytes"
+	"embed"
+	"image/png"
+
+	"github.com/hajimehoshi/ebiten/v2"
+)
 
 //go:embed *.png sounds fonts gameMap.tmx
 var fs embed.FS
@@ -20,8 +26,10 @@ var (
 	SpriteButton         = "theButton.png"
 	SpriteGun            = "sprite_gun.png"
 
-	ImageHeart = "heart.png"
-	ImageArrow = "arrow.png"
+	ImageHeart               = "heart.png"
+	ImageArrow               = "arrow.png"
+	ImageMapLayerPlatforms   = "map_layer_platforms.png"
+	ImageMapLayerDecorations = "map_layer_decorations.png"
 
 	FontMinecraft = "fonts/Minecraft.ttf"
 
@@ -33,9 +41,20 @@ var (
 
 func Bytes(path string) []byte {
 	bytes, err := fs.ReadFile(path)
+	panik(err)
+
+	return bytes
+}
+
+func Image(path string) *ebiten.Image {
+	img, err := png.Decode(bytes.NewReader(Bytes(path)))
+	panik(err)
+
+	return ebiten.NewImageFromImage(img)
+}
+
+func panik(err error) {
 	if err != nil {
 		panic(err)
 	}
-
-	return bytes
 }

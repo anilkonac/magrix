@@ -17,7 +17,6 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/jakecoffman/cp"
 	"github.com/lafriks/go-tiled"
-	"github.com/lafriks/go-tiled/render"
 	camera "github.com/melonfunction/ebiten-camera"
 )
 
@@ -101,7 +100,7 @@ func panicErr(err error) {
 func init() {
 	initCursorImage()
 	initRayHitImage()
-	imageArrow = loadImage(asset.Bytes(asset.ImageArrow))
+	imageArrow = asset.Image(asset.ImageArrow)
 
 	// init color matrices
 	drawOptionsArrowBlue.ColorM.ScaleWithColor(colorBlue)
@@ -220,23 +219,9 @@ func (g *game) loadMap(gameMap *tiled.Map) {
 	// Add the button
 	g.button = newButton(gameMap.ObjectGroups[objectGroupButton].Objects[0], g.space)
 
-	const (
-		layerPlatform    = 1
-		layerDecorations = 0
-	)
-
-	// Render layer images
-	renderer, err := render.NewRenderer(gameMap)
-	panicErr(err)
-
-	err = renderer.RenderLayer(layerPlatform)
-	panicErr(err)
-	imagePlatforms = ebiten.NewImageFromImage(renderer.Result)
-
-	renderer.Clear()
-	err = renderer.RenderLayer(layerDecorations)
-	panicErr(err)
-	imageDecorations = ebiten.NewImageFromImage(renderer.Result)
+	// Load layer images
+	imagePlatforms = asset.Image(asset.ImageMapLayerPlatforms)
+	imageDecorations = asset.Image(asset.ImageMapLayerDecorations)
 
 }
 
