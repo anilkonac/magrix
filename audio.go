@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"time"
 
-	_ "embed"
-
 	"github.com/anilkonac/magrix/asset"
 	"github.com/hajimehoshi/ebiten/v2/audio"
 	"github.com/hajimehoshi/ebiten/v2/audio/vorbis"

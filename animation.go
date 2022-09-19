@@ -6,8 +6,6 @@ import (
 	"math"
 	"time"
 
-	_ "embed"
-
 	"github.com/anilkonac/magrix/asset"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/yohamta/ganim8/v2"

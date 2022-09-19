@@ -2,7 +2,7 @@ package asset
 
 import "embed"
 
-//go:embed *.png sounds fonts
+//go:embed *.png sounds fonts gameMap.tmx
 var fs embed.FS
 
 var (
@@ -27,6 +27,8 @@ var (
 
 	Music          = "sounds/RaceToMars.ogg"
 	SoundExplosion = "sounds/explosion.wav"
+
+	Map = "gameMap.tmx"
 )
 
 func Bytes(path string) []byte {

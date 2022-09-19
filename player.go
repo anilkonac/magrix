@@ -7,8 +7,6 @@ import (
 	"image/png"
 	"math"
 
-	_ "embed"
-
 	"github.com/anilkonac/magrix/asset"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/jakecoffman/cp"

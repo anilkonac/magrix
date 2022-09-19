@@ -92,9 +92,6 @@ var (
 	showArrowOrange bool
 )
 
-//go:embed gameMap.tmx
-var bytesMap []byte
-
 func panicErr(err error) {
 	if err != nil {
 		panic(err)
@@ -164,7 +161,7 @@ func newGame() *game {
 
 	// Parse map file
 	// gameMap, err := tiled.LoadFile(mapPath)
-	gameMap, err := tiled.LoadReader("", bytes.NewReader(bytesMap))
+	gameMap, err := tiled.LoadReader("", bytes.NewReader(asset.Bytes(asset.Map)))
 	panicErr(err)
 	// tileLength = float64(gameMap.TileWidth)
 
@@ -188,7 +185,7 @@ func (g *game) restart() {
 
 	// Parse map file
 	// gameMap, err := tiled.LoadFile(mapPath)
-	gameMap, err := tiled.LoadReader("", bytes.NewReader(bytesMap))
+	gameMap, err := tiled.LoadReader("", bytes.NewReader(asset.Bytes(asset.Map)))
 	panicErr(err)
 
 	*g = game{
@@ -393,8 +390,8 @@ func (g *game) updateDrawOptions() {
 
 	// Blue arrow
 	direction := g.terminalBlue.pos.Sub(g.player.pos)
-	distance := direction.LengthSq()
-	if distance < 10*screenWidth {
+	distanceSq := direction.LengthSq()
+	if distanceSq < 10*screenWidth {
 		showArrowBlue = false
 	} else if g.terminalIntro.triggered && !g.terminalBlue.triggered {
 		showArrowBlue = true
@@ -410,8 +407,8 @@ func (g *game) updateDrawOptions() {
 
 	// Orange arrow
 	direction = g.terminalOrange.pos.Sub(g.player.pos)
-	distance = direction.LengthSq()
-	if distance < 10*screenWidth {
+	distanceSq = direction.LengthSq()
+	if distanceSq < 10*screenWidth {
 		showArrowOrange = false
 	} else if g.terminalIntro.triggered && !g.terminalOrange.triggered {
 		showArrowOrange = true
